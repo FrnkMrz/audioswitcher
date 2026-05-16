@@ -154,7 +154,8 @@ namespace PortableAudioSwitcher
             try
             {
                 device.OpenPropertyStore(0, out store);
-                store.GetValue(ref PKEY_Device_FriendlyName, out value);
+                PROPERTYKEY friendlyNameKey = PKEY_Device_FriendlyName;
+                store.GetValue(ref friendlyNameKey, out value);
                 string name = value.GetString();
                 return String.IsNullOrWhiteSpace(name) ? "Unbenanntes Audiogeraet" : name;
             }
