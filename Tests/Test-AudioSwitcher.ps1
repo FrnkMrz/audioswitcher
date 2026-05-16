@@ -73,6 +73,8 @@ Assert-True ($scriptContent -match 'PerMonitorV2') "DPI awareness should prefer 
 Assert-True ($scriptContent -match 'MethodInvocationException') "Blocked hotkey errors should be handled explicitly."
 Assert-True ($scriptContent -match 'InvalidOperationException') "Direct blocked hotkey errors should be handled explicitly."
 Assert-True ($scriptContent -match 'Der Hotkey \$Hotkey ist bereits belegt') "Blocked hotkey message should be user friendly."
+Assert-True ($scriptContent -match 'MOD_CONTROL') "Hotkey modifier constants should be documented."
+Assert-True ($scriptContent -match 'PerMonitorV2\) is enabled') "Fixed notification size should mention DPI scaling."
 Assert-True ($nativeTypeContent -match 'RegisterHotKey') "Hotkey registration entry point is missing."
 Assert-True ($nativeTypeContent -match 'MOD_NOREPEAT') "Hotkey repeat suppression is missing."
 Assert-True ($nativeTypeContent -match 'IsExcluded') "Device exclusion filtering is missing."
@@ -85,6 +87,9 @@ Assert-True ($nativeTypeContent -match 'SetDefaultEndpoint\(next\.Id, ERole\.eMu
 Assert-True ($nativeTypeContent -match 'SetDefaultEndpoint\(next\.Id, ERole\.eCommunications\)') "Communications role is not updated."
 Assert-True ($nativeTypeContent -match 'catch \(InvalidComObjectException\)') "COM cleanup should tolerate already-released RCWs."
 Assert-True ($nativeTypeContent -match 'undocumented Windows COM interface') "Undocumented IPolicyConfig risk should be documented."
+Assert-True ($nativeTypeContent -match 'CoreAudio objects are native COM references') "Explicit COM release should be explained."
+Assert-True ($nativeTypeContent -match 'MMDeviceEnumerator is the documented CoreAudio COM object') "CoreAudio enumerator should be explained."
+Assert-True ($nativeTypeContent -match 'method order matters for COM interop') "IPolicyConfig method order risk should be documented."
 
 $config = $configContent | ConvertFrom-Json
 Assert-True ($config.Hotkey -eq "Ctrl+Alt+A") "config.json default hotkey is incorrect."

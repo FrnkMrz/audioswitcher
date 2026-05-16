@@ -80,9 +80,13 @@ function ConvertTo-HotkeyParts {
 
     foreach ($part in $parts) {
         switch -Regex ($part) {
+            # 0x0002 is the Win32 MOD_CONTROL flag used by RegisterHotKey.
             "^(Ctrl|Control|Strg)$" { $modifiers = $modifiers -bor 0x0002; continue }
+            # 0x0001 is MOD_ALT.
             "^(Alt)$" { $modifiers = $modifiers -bor 0x0001; continue }
+            # 0x0004 is MOD_SHIFT.
             "^(Shift|Umschalt)$" { $modifiers = $modifiers -bor 0x0004; continue }
+            # 0x0008 is MOD_WIN, the Windows logo key.
             "^(Win|Windows|Meta)$" { $modifiers = $modifiers -bor 0x0008; continue }
             default {
                 if ($keyName) {
@@ -136,6 +140,8 @@ function Show-SwitchNotification {
     $form.TopMost = $true
     $form.BackColor = [System.Drawing.Color]::FromArgb(32, 36, 42)
     $form.Opacity = 0.95
+    # Fixed notification pixels stay usable on scaled displays because
+    # SetHighDpiMode(PerMonitorV2) is enabled before any forms are created.
     $form.Width = 440
     $form.Height = 86
 

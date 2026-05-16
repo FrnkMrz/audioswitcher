@@ -201,6 +201,9 @@ namespace PortableAudioSwitcher
             {
                 try
                 {
+                    // CoreAudio objects are native COM references. Releasing
+                    // them explicitly avoids waiting for the .NET garbage
+                    // collector to clean up Windows audio handles later.
                     Marshal.FinalReleaseComObject(instance);
                 }
                 catch (InvalidComObjectException)
@@ -243,10 +246,14 @@ namespace PortableAudioSwitcher
         eCommunications = 2
     }
 
+    // MMDeviceEnumerator is the documented CoreAudio COM object Windows uses
+    // to list playback and recording devices.
     [ComImport]
     [Guid("bcde0395-e52f-467c-8e3d-c4579291692e")]
     internal class MMDeviceEnumerator { }
 
+    // IMMDeviceEnumerator is the interface behind MMDeviceEnumerator. The GUID
+    // tells .NET which native Windows interface layout to call.
     [ComImport]
     [Guid("a95664d2-9614-4f35-a746-de8db63617e6")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -322,11 +329,14 @@ namespace PortableAudioSwitcher
 
     // IPolicyConfig is an undocumented Windows COM interface. It is stable on
     // Windows 10/11 today, but this block is the likely breaking point if a
-    // future Windows release changes the internal CoreAudio policy API.
+    // future Windows release changes the internal CoreAudio policy API. It is
+    // what lets this tool change the default audio device without admin rights.
     [ComImport]
     [Guid("870af99c-171d-4f9e-af0d-e63df40c2bc9")]
     internal class CPolicyConfigClient { }
 
+    // This interface exposes Windows' internal audio-policy methods. The GUID
+    // identifies the COM interface; method order matters for COM interop.
     [ComImport]
     [Guid("f8679f50-850a-41cf-9c72-430f290290c8")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -342,6 +352,8 @@ namespace PortableAudioSwitcher
         [PreserveSig] int SetShareMode([MarshalAs(UnmanagedType.LPWStr)] string pszDeviceName, IntPtr mode);
         [PreserveSig] int GetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string pszDeviceName, ref PROPERTYKEY key, IntPtr pv);
         [PreserveSig] int SetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string pszDeviceName, ref PROPERTYKEY key, ref PROPVARIANT pv);
+        // Sets the default endpoint for one Windows audio role, for example
+        // normal app audio, multimedia, or communication apps.
         [PreserveSig] int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string pszDeviceName, ERole role);
         [PreserveSig] int SetEndpointVisibility([MarshalAs(UnmanagedType.LPWStr)] string pszDeviceName, bool bVisible);
     }
