@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace PortableAudioSwitcher
@@ -46,7 +47,7 @@ namespace PortableAudioSwitcher
                 string message;
                 try
                 {
-                    message = AudioSwitcher.SwitchToNext();
+                    message = AudioSwitcher.SwitchToNext(AudioSwitcherSettings.ExcludedDeviceNamePatterns);
                 }
                 catch (Exception ex)
                 {
@@ -75,7 +76,7 @@ namespace PortableAudioSwitcher
         private static readonly PROPERTYKEY PKEY_Device_FriendlyName =
             new PROPERTYKEY(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 14);
 
-        public static string SwitchToNext()
+        public static string SwitchToNext(string[] excludedDeviceNamePatterns)
         {
             IMMDeviceEnumerator enumerator = null;
             IMMDeviceCollection collection = null;
@@ -107,17 +108,25 @@ namespace PortableAudioSwitcher
                         string id;
                         device.GetId(out id);
                         string name = GetFriendlyName(device);
-                        devices.Add(new AudioDevice(id, name));
-
-                        if (String.Equals(id, defaultId, StringComparison.OrdinalIgnoreCase))
+                        if (!IsExcluded(name, excludedDeviceNamePatterns))
                         {
-                            currentIndex = (int)i;
+                            devices.Add(new AudioDevice(id, name));
+
+                            if (String.Equals(id, defaultId, StringComparison.OrdinalIgnoreCase))
+                            {
+                                currentIndex = devices.Count - 1;
+                            }
                         }
                     }
                     finally
                     {
                         ReleaseComObject(device);
                     }
+                }
+
+                if (devices.Count == 0)
+                {
+                    throw new InvalidOperationException("Keine aktiven Ausgabegeraete nach Anwendung der Ausschlussliste gefunden.");
                 }
 
                 int nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % devices.Count;
@@ -143,8 +152,28 @@ namespace PortableAudioSwitcher
         {
             if (hresult < 0)
             {
-                Marshal.ThrowExceptionForHR(hresult);
+                Exception error = Marshal.GetExceptionForHR(hresult);
+                string detail = error == null ? "HRESULT 0x" + hresult.ToString("X8") : error.Message;
+                throw new InvalidOperationException("Standard-Audiogeraet konnte fuer Rolle '" + role + "' nicht gesetzt werden: " + detail);
             }
+        }
+
+        private static bool IsExcluded(string deviceName, string[] excludedDeviceNamePatterns)
+        {
+            if (excludedDeviceNamePatterns == null || excludedDeviceNamePatterns.Length == 0) return false;
+
+            foreach (string pattern in excludedDeviceNamePatterns)
+            {
+                if (String.IsNullOrWhiteSpace(pattern)) continue;
+
+                string regexPattern = "^" + Regex.Escape(pattern.Trim()).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+                if (Regex.IsMatch(deviceName ?? String.Empty, regexPattern, RegexOptions.IgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static string GetFriendlyName(IMMDevice device)
@@ -193,6 +222,11 @@ namespace PortableAudioSwitcher
             Id = id;
             Name = name;
         }
+    }
+
+    public static class AudioSwitcherSettings
+    {
+        public static string[] ExcludedDeviceNamePatterns = new string[0];
     }
 
     internal enum EDataFlow

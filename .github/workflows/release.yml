@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Build release ZIP
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build portable ZIP
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $packageRoot = Join-Path $env:RUNNER_TEMP "AudioSwitcher"
+          New-Item -ItemType Directory -Path $packageRoot | Out-Null
+          $files = @(
+            "AudioSwitcher.ps1",
+            "AudioSwitcher.Native.cs",
+            "Start-AudioSwitcher.bat",
+            "config.json",
+            "Install-Autostart.ps1",
+            "Uninstall-Autostart.ps1",
+            "README.md",
+            "LICENSE"
+          )
+          foreach ($file in $files) {
+            Copy-Item -LiteralPath $file -Destination $packageRoot
+          }
+          Compress-Archive -Path (Join-Path $packageRoot "*") -DestinationPath "AudioSwitcher.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AudioSwitcher
+          path: AudioSwitcher.zip
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: AudioSwitcher.zip

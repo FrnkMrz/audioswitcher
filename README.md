@@ -12,6 +12,7 @@ Ein kleines, portables PowerShell-Tool, das per globalem Hotkey sofort zum naech
 - zyklischer Wechsel durch alle aktiven Ausgabegeraete
 - setzt Standardgeraet fuer Konsole, Multimedia und Kommunikation
 - zeigt nach jedem Wechsel kurz das aktuell aktive Ausgabegeraet an
+- kann bestimmte Ausgabegeraete per Namensmuster auslassen
 - laeuft im Hintergrund mit Tray-Symbol
 - portabel als PowerShell-Skript plus optionaler Startdatei
 
@@ -51,6 +52,33 @@ Ohne Tray-Symbol:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\AudioSwitcher.ps1 -NoTray
 ```
 
+## Konfiguration
+
+Die Datei `config.json` steuert die Standardwerte:
+
+```json
+{
+  "Hotkey": "Ctrl+Alt+A",
+  "ShowTray": true,
+  "NotificationDurationMs": 1800,
+  "NotificationPosition": "BottomRight",
+  "ExcludedDeviceNamePatterns": []
+}
+```
+
+`NotificationPosition` akzeptiert `BottomRight`, `BottomLeft`, `TopRight` und `TopLeft`.
+
+Geraete koennen mit Wildcards aus der Rotation genommen werden:
+
+```json
+"ExcludedDeviceNamePatterns": [
+  "*Monitor*",
+  "DELL*"
+]
+```
+
+Kommandozeilenwerte wie `-Hotkey` und `-NoTray` ueberschreiben die Config fuer diesen Start.
+
 ## Hotkeys
 
 Modifier werden mit `+` kombiniert.
@@ -76,9 +104,15 @@ Wenn ein Hotkey schon von Windows oder einem anderen Programm belegt ist, meldet
 
 Wenn der Audio Switcher automatisch mit Windows starten soll:
 
-1. `Win+R` druecken.
-2. `shell:startup` eingeben.
-3. Eine Verknuepfung zu `Start-AudioSwitcher.bat` in diesen Ordner legen.
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-Autostart.ps1
+```
+
+Autostart wieder entfernen:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall-Autostart.ps1
+```
 
 ## Beenden
 
@@ -101,6 +135,7 @@ Windows stellt fuer das Setzen des Standard-Audiogeraets keine offizielle PowerS
 Die GitHub-Actions-Pipeline laeuft auf `windows-latest` und fuehrt einen Smoke-Test aus:
 
 - PowerShell-Syntax wird geparst
+- `config.json`, Autostart-Skripte und Release-Workflow werden statisch geprueft
 - Hotkey-Parsing wird mit gueltigen und ungueltigen Kombinationen getestet
 - der native C#-Code wird kompiliert
 - die Windows-API-Typen werden kompiliert
@@ -115,8 +150,12 @@ Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiog
 | `AudioSwitcher.ps1` | Hauptskript mit Hotkey-Listener und Audio-Umschaltung |
 | `AudioSwitcher.Native.cs` | Native Windows-Hotkey- und CoreAudio-Typen |
 | `Start-AudioSwitcher.bat` | Doppelklick-Starter fuer Windows |
+| `config.json` | Standard-Konfiguration fuer Hotkey, Anzeige und ausgeschlossene Geraete |
+| `Install-Autostart.ps1` | Erstellt eine Windows-Autostart-Verknuepfung |
+| `Uninstall-Autostart.ps1` | Entfernt die Windows-Autostart-Verknuepfung |
 | `Tests/Test-AudioSwitcher.ps1` | Smoke-Test fuer CI |
 | `.github/workflows/test.yml` | GitHub-Actions-Pipeline |
+| `.github/workflows/release.yml` | Baut ein portables Release-ZIP |
 
 ## Hinweise
 

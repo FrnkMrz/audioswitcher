@@ -1,5 +1,5 @@
 param(
-    [string]$Hotkey = "Ctrl+Alt+A",
+    [string]$Hotkey,
     [switch]$NoTray
 )
 
@@ -30,6 +30,36 @@ if (-not (Test-Path -LiteralPath $nativeTypePath)) {
 }
 
 Add-Type -ReferencedAssemblies (Resolve-WindowsFormsReferences) -Path $nativeTypePath
+
+function Get-AudioSwitcherConfig {
+    $defaults = [pscustomobject]@{
+        Hotkey = "Ctrl+Alt+A"
+        ShowTray = $true
+        NotificationDurationMs = 1800
+        NotificationPosition = "BottomRight"
+        ExcludedDeviceNamePatterns = @()
+    }
+
+    $configPath = Join-Path $PSScriptRoot "config.json"
+    if (-not (Test-Path -LiteralPath $configPath)) {
+        return $defaults
+    }
+
+    try {
+        $fileConfig = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+    }
+    catch {
+        throw "config.json konnte nicht gelesen werden: $($_.Exception.Message)"
+    }
+
+    foreach ($property in $defaults.PSObject.Properties.Name) {
+        if ($null -ne $fileConfig.$property) {
+            $defaults.$property = $fileConfig.$property
+        }
+    }
+
+    $defaults
+}
 
 function ConvertTo-HotkeyParts {
     param([string]$HotkeyText)
@@ -123,13 +153,25 @@ function Show-SwitchNotification {
     $form.Controls.Add($messageLabel)
 
     $workingArea = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
-    $form.Location = [System.Drawing.Point]::new(
-        $workingArea.Right - $form.Width - 24,
-        $workingArea.Bottom - $form.Height - 32
-    )
+    $marginX = 24
+    $marginY = 32
+    switch ($script:config.NotificationPosition) {
+        "BottomLeft" {
+            $form.Location = [System.Drawing.Point]::new($workingArea.Left + $marginX, $workingArea.Bottom - $form.Height - $marginY)
+        }
+        "TopLeft" {
+            $form.Location = [System.Drawing.Point]::new($workingArea.Left + $marginX, $workingArea.Top + $marginY)
+        }
+        "TopRight" {
+            $form.Location = [System.Drawing.Point]::new($workingArea.Right - $form.Width - $marginX, $workingArea.Top + $marginY)
+        }
+        default {
+            $form.Location = [System.Drawing.Point]::new($workingArea.Right - $form.Width - $marginX, $workingArea.Bottom - $form.Height - $marginY)
+        }
+    }
 
     $timer = [System.Windows.Forms.Timer]::new()
-    $timer.Interval = 1800
+    $timer.Interval = [Math]::Max(500, [int]$script:config.NotificationDurationMs)
     $timer.add_Tick({
         $script:notificationTimer.Stop()
         $script:notificationTimer.Dispose()
@@ -149,11 +191,22 @@ function Show-SwitchNotification {
     $timer.Start()
 }
 
+$script:config = Get-AudioSwitcherConfig
+if ($Hotkey) {
+    $script:config.Hotkey = $Hotkey
+}
+if ($NoTray) {
+    $script:config.ShowTray = $false
+}
+
+[PortableAudioSwitcher.AudioSwitcherSettings]::ExcludedDeviceNamePatterns = @($script:config.ExcludedDeviceNamePatterns)
+
+$Hotkey = $script:config.Hotkey
 $hotkeyParts = ConvertTo-HotkeyParts -HotkeyText $Hotkey
 $window = [PortableAudioSwitcher.HotkeyWindow]::new(41011, $hotkeyParts.Modifiers, $hotkeyParts.Key)
 
 $tray = $null
-if (-not $NoTray) {
+if ($script:config.ShowTray) {
     $tray = [System.Windows.Forms.NotifyIcon]::new()
     $tray.Icon = [System.Drawing.SystemIcons]::Application
     $tray.Text = "Audio Switcher ($Hotkey)"

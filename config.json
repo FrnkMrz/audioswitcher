@@ -1,0 +1,7 @@
+{
+  "Hotkey": "Ctrl+Alt+A",
+  "ShowTray": true,
+  "NotificationDurationMs": 1800,
+  "NotificationPosition": "BottomRight",
+  "ExcludedDeviceNamePatterns": []
+}
