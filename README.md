@@ -100,7 +100,7 @@ Windows stellt fuer das Setzen des Standard-Audiogeraets keine offizielle PowerS
 Die GitHub-Actions-Pipeline laeuft auf `windows-latest` und fuehrt einen Smoke-Test aus:
 
 - PowerShell-Syntax wird geparst
-- der eingebettete C#-Code wird extrahiert
+- der native C#-Code wird kompiliert
 - die Windows-API-Typen werden kompiliert
 - wichtige Einstiegspunkte wie Hotkey-Registrierung und Audio-Umschaltung werden statisch geprueft
 
@@ -111,6 +111,7 @@ Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiog
 | Datei | Zweck |
 | --- | --- |
 | `AudioSwitcher.ps1` | Hauptskript mit Hotkey-Listener und Audio-Umschaltung |
+| `AudioSwitcher.Native.cs` | Native Windows-Hotkey- und CoreAudio-Typen |
 | `Start-AudioSwitcher.bat` | Doppelklick-Starter fuer Windows |
 | `Tests/Test-AudioSwitcher.ps1` | Smoke-Test fuer CI |
 | `.github/workflows/test.yml` | GitHub-Actions-Pipeline |
