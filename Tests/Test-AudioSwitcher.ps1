@@ -28,6 +28,7 @@ $parseErrors = $null
 Assert-True ($parseErrors.Count -eq 0) ("PowerShell parser found errors: " + ($parseErrors | ForEach-Object { $_.Message } | Out-String))
 Assert-True ($scriptContent -match '\[string\]\$Hotkey = "Ctrl\+Alt\+A"') "Default hotkey is missing or changed."
 Assert-True ($scriptContent -match 'AudioSwitcher\.Native\.cs') "Native C# type file is not loaded."
+Assert-True ($scriptContent -match 'Show-SwitchNotification') "On-screen switch notification is missing."
 Assert-True ($nativeTypeContent -match 'RegisterHotKey') "Hotkey registration entry point is missing."
 Assert-True ($nativeTypeContent -match 'MOD_NOREPEAT') "Hotkey repeat suppression is missing."
 Assert-True ($nativeTypeContent -match 'SetDefaultEndpoint') "Audio endpoint switching entry point is missing."

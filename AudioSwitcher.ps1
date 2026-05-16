@@ -78,6 +78,77 @@ function ConvertTo-HotkeyParts {
     }
 }
 
+function Show-SwitchNotification {
+    param([string]$Message)
+
+    if ($script:notificationTimer) {
+        $script:notificationTimer.Stop()
+        $script:notificationTimer.Dispose()
+        $script:notificationTimer = $null
+    }
+
+    if ($script:notificationForm) {
+        $script:notificationForm.Close()
+        $script:notificationForm.Dispose()
+        $script:notificationForm = $null
+    }
+
+    $form = [System.Windows.Forms.Form]::new()
+    $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
+    $form.StartPosition = [System.Windows.Forms.FormStartPosition]::Manual
+    $form.ShowInTaskbar = $false
+    $form.TopMost = $true
+    $form.BackColor = [System.Drawing.Color]::FromArgb(32, 36, 42)
+    $form.Opacity = 0.95
+    $form.Width = 440
+    $form.Height = 86
+
+    $titleLabel = [System.Windows.Forms.Label]::new()
+    $titleLabel.Text = "Aktuelle Audioausgabe"
+    $titleLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 190, 205)
+    $titleLabel.Font = [System.Drawing.Font]::new("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
+    $titleLabel.Location = [System.Drawing.Point]::new(18, 12)
+    $titleLabel.Size = [System.Drawing.Size]::new(404, 18)
+
+    $messageLabel = [System.Windows.Forms.Label]::new()
+    $messageLabel.Text = $Message -replace '^Audioausgabe:\s*', ''
+    $messageLabel.ForeColor = [System.Drawing.Color]::White
+    $messageLabel.Font = [System.Drawing.Font]::new("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $messageLabel.Location = [System.Drawing.Point]::new(18, 34)
+    $messageLabel.Size = [System.Drawing.Size]::new(404, 34)
+    $messageLabel.AutoEllipsis = $true
+    $messageLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+
+    $form.Controls.Add($titleLabel)
+    $form.Controls.Add($messageLabel)
+
+    $workingArea = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+    $form.Location = [System.Drawing.Point]::new(
+        $workingArea.Right - $form.Width - 24,
+        $workingArea.Bottom - $form.Height - 32
+    )
+
+    $timer = [System.Windows.Forms.Timer]::new()
+    $timer.Interval = 1800
+    $timer.add_Tick({
+        $script:notificationTimer.Stop()
+        $script:notificationTimer.Dispose()
+        $script:notificationTimer = $null
+
+        if ($script:notificationForm) {
+            $script:notificationForm.Close()
+            $script:notificationForm.Dispose()
+            $script:notificationForm = $null
+        }
+    })
+
+    $script:notificationForm = $form
+    $script:notificationTimer = $timer
+
+    $form.Show()
+    $timer.Start()
+}
+
 $hotkeyParts = ConvertTo-HotkeyParts -HotkeyText $Hotkey
 $window = [PortableAudioSwitcher.HotkeyWindow]::new(41011, $hotkeyParts.Modifiers, $hotkeyParts.Key)
 
@@ -100,6 +171,7 @@ if (-not $NoTray) {
 $window.add_Switched({
     param($sender, $eventArgs)
     Write-Host $eventArgs.Message
+    Show-SwitchNotification -Message $eventArgs.Message
     if ($script:tray) {
         $script:tray.BalloonTipTitle = "Audio Switcher"
         $script:tray.BalloonTipText = $eventArgs.Message
@@ -116,6 +188,14 @@ finally {
     if ($tray) {
         $tray.Visible = $false
         $tray.Dispose()
+    }
+    if ($notificationTimer) {
+        $notificationTimer.Stop()
+        $notificationTimer.Dispose()
+    }
+    if ($notificationForm) {
+        $notificationForm.Close()
+        $notificationForm.Dispose()
     }
     $window.Dispose()
 }

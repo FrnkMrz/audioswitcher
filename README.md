@@ -11,6 +11,7 @@ Ein kleines, portables PowerShell-Tool, das per globalem Hotkey sofort zum naech
 - globaler, frei waehlbarer Hotkey
 - zyklischer Wechsel durch alle aktiven Ausgabegeraete
 - setzt Standardgeraet fuer Konsole, Multimedia und Kommunikation
+- zeigt nach jedem Wechsel kurz das aktuell aktive Ausgabegeraet an
 - laeuft im Hintergrund mit Tray-Symbol
 - portabel als PowerShell-Skript plus optionaler Startdatei
 
@@ -30,7 +31,7 @@ Standard-Hotkey:
 Ctrl+Alt+A
 ```
 
-Nach jedem Tastendruck wird das naechste aktive Ausgabegeraet als Standard gesetzt.
+Nach jedem Tastendruck wird das naechste aktive Ausgabegeraet als Standard gesetzt und kurz unten rechts eingeblendet.
 
 ## Direkt per PowerShell starten
 
