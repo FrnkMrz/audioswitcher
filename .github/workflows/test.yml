@@ -24,3 +24,30 @@ jobs:
       - name: Run PowerShell smoke tests
         shell: powershell
         run: ./Tests/Test-AudioSwitcher.ps1
+
+      - name: Build portable ZIP
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $packageRoot = Join-Path $env:RUNNER_TEMP "AudioSwitcher"
+          New-Item -ItemType Directory -Path $packageRoot | Out-Null
+          $files = @(
+            "AudioSwitcher.ps1",
+            "AudioSwitcher.Native.cs",
+            "Start-AudioSwitcher.bat",
+            "config.json",
+            "Install-Autostart.ps1",
+            "Uninstall-Autostart.ps1",
+            "README.md",
+            "LICENSE"
+          )
+          foreach ($file in $files) {
+            Copy-Item -LiteralPath $file -Destination $packageRoot
+          }
+          Compress-Archive -Path (Join-Path $packageRoot "*") -DestinationPath "AudioSwitcher.zip" -Force
+
+      - name: Upload portable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: AudioSwitcher
+          path: AudioSwitcher.zip
