@@ -209,7 +209,23 @@ if ($NoTray) {
 
 $Hotkey = $script:config.Hotkey
 $hotkeyParts = ConvertTo-HotkeyParts -HotkeyText $Hotkey
-$window = [PortableAudioSwitcher.HotkeyWindow]::new(41011, $hotkeyParts.Modifiers, $hotkeyParts.Key)
+try {
+    $window = [PortableAudioSwitcher.HotkeyWindow]::new(41011, $hotkeyParts.Modifiers, $hotkeyParts.Key)
+}
+catch [System.Management.Automation.MethodInvocationException] {
+    if ($_.Exception.InnerException -and $_.Exception.InnerException.Message -like "Hotkey konnte nicht registriert werden*") {
+        throw "Der Hotkey $Hotkey ist bereits belegt. Bitte waehlen Sie eine andere Kombination."
+    }
+
+    throw
+}
+catch [System.InvalidOperationException] {
+    if ($_.Exception.Message -like "Hotkey konnte nicht registriert werden*") {
+        throw "Der Hotkey $Hotkey ist bereits belegt. Bitte waehlen Sie eine andere Kombination."
+    }
+
+    throw
+}
 
 $tray = $null
 if ($script:config.ShowTray) {
