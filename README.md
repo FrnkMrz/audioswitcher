@@ -101,9 +101,10 @@ Windows stellt fuer das Setzen des Standard-Audiogeraets keine offizielle PowerS
 Die GitHub-Actions-Pipeline laeuft auf `windows-latest` und fuehrt einen Smoke-Test aus:
 
 - PowerShell-Syntax wird geparst
+- Hotkey-Parsing wird mit gueltigen und ungueltigen Kombinationen getestet
 - der native C#-Code wird kompiliert
 - die Windows-API-Typen werden kompiliert
-- wichtige Einstiegspunkte wie Hotkey-Registrierung und Audio-Umschaltung werden statisch geprueft
+- wichtige Einstiegspunkte wie Hotkey-Registrierung, Anzeige und Audio-Umschaltung werden statisch geprueft
 
 Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiogeraet auf dem Runner.
 
