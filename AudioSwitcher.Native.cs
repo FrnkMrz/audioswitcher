@@ -320,6 +320,9 @@ namespace PortableAudioSwitcher
         }
     }
 
+    // IPolicyConfig is an undocumented Windows COM interface. It is stable on
+    // Windows 10/11 today, but this block is the likely breaking point if a
+    // future Windows release changes the internal CoreAudio policy API.
     [ComImport]
     [Guid("870af99c-171d-4f9e-af0d-e63df40c2bc9")]
     internal class CPolicyConfigClient { }

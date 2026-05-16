@@ -81,6 +81,7 @@ Assert-True ($nativeTypeContent -match 'SetDefaultEndpoint\(next\.Id, ERole\.eCo
 Assert-True ($nativeTypeContent -match 'SetDefaultEndpoint\(next\.Id, ERole\.eMultimedia\)') "Multimedia role is not updated."
 Assert-True ($nativeTypeContent -match 'SetDefaultEndpoint\(next\.Id, ERole\.eCommunications\)') "Communications role is not updated."
 Assert-True ($nativeTypeContent -match 'catch \(InvalidComObjectException\)') "COM cleanup should tolerate already-released RCWs."
+Assert-True ($nativeTypeContent -match 'undocumented Windows COM interface') "Undocumented IPolicyConfig risk should be documented."
 
 $config = $configContent | ConvertFrom-Json
 Assert-True ($config.Hotkey -eq "Ctrl+Alt+A") "config.json default hotkey is incorrect."
