@@ -4,6 +4,8 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $scriptPath = Join-Path $repoRoot "AudioSwitcher.ps1"
 $nativeTypePath = Join-Path $repoRoot "AudioSwitcher.Native.cs"
 $configPath = Join-Path $repoRoot "config.json"
+$readmePath = Join-Path $repoRoot "README.md"
+$englishReadmePath = Join-Path $repoRoot "README.en.md"
 $launcherPath = Join-Path $repoRoot "Start-AudioSwitcher.bat"
 $installAutostartPath = Join-Path $repoRoot "Install-Autostart.ps1"
 $uninstallAutostartPath = Join-Path $repoRoot "Uninstall-Autostart.ps1"
@@ -42,6 +44,8 @@ function Assert-Throws {
 Assert-True (Test-Path $scriptPath) "AudioSwitcher.ps1 was not found."
 Assert-True (Test-Path $nativeTypePath) "AudioSwitcher.Native.cs was not found."
 Assert-True (Test-Path $configPath) "config.json was not found."
+Assert-True (Test-Path $readmePath) "README.md was not found."
+Assert-True (Test-Path $englishReadmePath) "README.en.md was not found."
 Assert-True (Test-Path $launcherPath) "Start-AudioSwitcher.bat was not found."
 Assert-True (Test-Path $installAutostartPath) "Install-Autostart.ps1 was not found."
 Assert-True (Test-Path $uninstallAutostartPath) "Uninstall-Autostart.ps1 was not found."
@@ -50,6 +54,8 @@ Assert-True (Test-Path $releaseWorkflowPath) "Release workflow was not found."
 $scriptContent = Get-Content -LiteralPath $scriptPath -Raw
 $nativeTypeContent = Get-Content -LiteralPath $nativeTypePath -Raw
 $configContent = Get-Content -LiteralPath $configPath -Raw
+$readmeContent = Get-Content -LiteralPath $readmePath -Raw
+$englishReadmeContent = Get-Content -LiteralPath $englishReadmePath -Raw
 $installAutostartContent = Get-Content -LiteralPath $installAutostartPath -Raw
 $uninstallAutostartContent = Get-Content -LiteralPath $uninstallAutostartPath -Raw
 $releaseWorkflowContent = Get-Content -LiteralPath $releaseWorkflowPath -Raw
@@ -102,7 +108,15 @@ Assert-True ($installAutostartContent -match 'WScript\.Shell') "Autostart instal
 Assert-True ($installAutostartContent -match 'Startup') "Autostart installer should target the Startup folder."
 Assert-True ($installAutostartContent -match 'Start-AudioSwitcher\.bat') "Autostart installer should launch the batch file."
 Assert-True ($uninstallAutostartContent -match 'Remove-Item') "Autostart uninstaller should remove the shortcut."
+Assert-True ($readmeContent -match 'Deutscher Quickguide') "German quick guide is missing."
+Assert-True ($readmeContent -match 'README\.en\.md') "German README should link the English documentation."
+Assert-True ($readmeContent -match 'Release-ZIP') "German README should document release ZIPs."
+Assert-True ($englishReadmeContent -match 'Audio Switcher for Windows 11') "English README title is missing."
+Assert-True ($englishReadmeContent -match 'Quick Start') "English quick start is missing."
+Assert-True ($englishReadmeContent -match 'GitHub Actions test pipeline builds a portable') "English README should document CI ZIP artifacts."
+Assert-True ($englishReadmeContent -match 'README\.md') "English README should link the German documentation."
 Assert-True ($releaseWorkflowContent -match 'Compress-Archive') "Release workflow should build a ZIP file."
+Assert-True ($releaseWorkflowContent -match 'README\.en\.md') "Release ZIP should include English documentation."
 Assert-True ($releaseWorkflowContent -match 'actions/upload-artifact@v4') "Release workflow should upload the ZIP artifact."
 Assert-True ($releaseWorkflowContent -match 'softprops/action-gh-release@v2') "Release workflow should publish tagged releases."
 

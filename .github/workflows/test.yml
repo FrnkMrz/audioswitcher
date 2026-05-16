@@ -39,6 +39,7 @@ jobs:
             "Install-Autostart.ps1",
             "Uninstall-Autostart.ps1",
             "README.md",
+            "README.en.md",
             "LICENSE"
           )
           foreach ($file in $files) {

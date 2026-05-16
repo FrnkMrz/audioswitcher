@@ -4,6 +4,29 @@
 
 Ein kleines, portables PowerShell-Tool, das per globalem Hotkey sofort zum naechsten aktiven Windows-Ausgabegeraet wechselt. Praktisch fuer Setups mit Lautsprechern, Headset, Monitor-Audio, Dockingstation oder Bluetooth-Kopfhoerern.
 
+English documentation: [README.en.md](README.en.md)
+
+## Deutscher Quickguide
+
+1. ZIP aus GitHub Actions herunterladen oder Repository klonen.
+2. Ordner auf dem Windows-11-Laptop entpacken bzw. oeffnen.
+3. `Start-AudioSwitcher.bat` doppelklicken.
+4. Mit `Ctrl+Alt+A` zum naechsten aktiven Ausgabegeraet wechseln.
+5. Nach jedem Tastendruck zeigt eine kleine Einblendung das neue aktuelle Ausgabegeraet.
+6. Rechtsklick auf das Tray-Symbol und `Beenden`, wenn das Tool beendet werden soll.
+
+Autostart einrichten:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-Autostart.ps1
+```
+
+Autostart entfernen:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall-Autostart.ps1
+```
+
 ## Highlights
 
 - kein Administratorrecht notwendig
@@ -15,6 +38,7 @@ Ein kleines, portables PowerShell-Tool, das per globalem Hotkey sofort zum naech
 - kann bestimmte Ausgabegeraete per Namensmuster auslassen
 - laeuft im Hintergrund mit Tray-Symbol
 - portabel als PowerShell-Skript plus optionaler Startdatei
+- Release-ZIP wird durch GitHub Actions gebaut
 
 ## Schnellstart
 
@@ -98,7 +122,13 @@ Ctrl+Alt+F8
 Win+Shift+S
 ```
 
-Wenn ein Hotkey schon von Windows oder einem anderen Programm belegt ist, meldet das Skript beim Start einen Fehler. Waehle dann einfach eine andere Kombination.
+Wenn ein Hotkey schon von Windows oder einem anderen Programm belegt ist, meldet das Skript beim Start:
+
+```text
+Der Hotkey Ctrl+Alt+A ist bereits belegt. Bitte waehlen Sie eine andere Kombination.
+```
+
+Waehle dann in `config.json` oder per `-Hotkey` eine andere Kombination.
 
 ## Autostart
 
@@ -112,6 +142,17 @@ Autostart wieder entfernen:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall-Autostart.ps1
+```
+
+## Release-ZIP
+
+Die normale GitHub-Actions-Pipeline baut nach dem Smoke-Test ein portables `AudioSwitcher.zip` und laedt es als Artifact hoch.
+
+Fuer echte Releases gibt es zusaetzlich den Workflow `.github/workflows/release.yml`. Bei Tags wie `v1.0.0` wird ein GitHub Release mit ZIP-Anhang erzeugt.
+
+```powershell
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 ## Beenden
@@ -130,16 +171,20 @@ Das Skript verwendet lokale Windows-CoreAudio-Schnittstellen:
 
 Windows stellt fuer das Setzen des Standard-Audiogeraets keine offizielle PowerShell-Cmdlet-Schnittstelle bereit. Deshalb nutzt das Skript die vorhandene Windows-COM/CoreAudio-API direkt aus PowerShell heraus. Das funktioniert unter normalen Benutzerrechten.
 
+Hinweis fuer Entwickler: Das Umschalten nutzt `IPolicyConfig`, eine undokumentierte Windows-COM-Schnittstelle. Sie funktioniert unter Windows 10 und 11 stabil, kann aber bei zukuenftigen Windows-Versionen ein Breaking-Point sein.
+
 ## Tests
 
 Die GitHub-Actions-Pipeline laeuft auf `windows-latest` und fuehrt einen Smoke-Test aus:
 
 - PowerShell-Syntax wird geparst
 - `config.json`, Autostart-Skripte und Release-Workflow werden statisch geprueft
+- deutsche und englische Dokumentation werden statisch geprueft
 - Hotkey-Parsing wird mit gueltigen und ungueltigen Kombinationen getestet
 - der native C#-Code wird kompiliert
 - die Windows-API-Typen werden kompiliert
 - wichtige Einstiegspunkte wie Hotkey-Registrierung, Anzeige und Audio-Umschaltung werden statisch geprueft
+- danach wird ein portables ZIP-Artefakt gebaut
 
 Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiogeraet auf dem Runner.
 
@@ -153,9 +198,11 @@ Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiog
 | `config.json` | Standard-Konfiguration fuer Hotkey, Anzeige und ausgeschlossene Geraete |
 | `Install-Autostart.ps1` | Erstellt eine Windows-Autostart-Verknuepfung |
 | `Uninstall-Autostart.ps1` | Entfernt die Windows-Autostart-Verknuepfung |
+| `README.md` | Deutsche Dokumentation mit Quickguide |
+| `README.en.md` | Englische Dokumentation |
 | `Tests/Test-AudioSwitcher.ps1` | Smoke-Test fuer CI |
-| `.github/workflows/test.yml` | GitHub-Actions-Pipeline |
-| `.github/workflows/release.yml` | Baut ein portables Release-ZIP |
+| `.github/workflows/test.yml` | Testet das Tool und baut ein portables ZIP |
+| `.github/workflows/release.yml` | Baut und veroeffentlicht ein Release-ZIP |
 
 ## Hinweise
 
