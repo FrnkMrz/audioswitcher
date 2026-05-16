@@ -30,7 +30,7 @@ Assert-True ($scriptContent -match 'DEVICE_STATE_ACTIVE') "Active-device filteri
 
 $typeDefinitionMatch = [regex]::Match(
     $scriptContent,
-    '(?s)Add-Type\s+-ReferencedAssemblies\s+@\("System\.Windows\.Forms\.dll"\)\s+-TypeDefinition\s+@"\r?\n(?<code>.*?)\r?\n"@'
+    '(?s)Add-Type\s+-ReferencedAssemblies\s+\(Resolve-WindowsFormsReferences\)\s+-TypeDefinition\s+@"\r?\n(?<code>.*?)\r?\n"@'
 )
 
 Assert-True $typeDefinitionMatch.Success "Could not extract embedded C# type definition."
