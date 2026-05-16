@@ -68,6 +68,8 @@ Assert-True ($scriptContent -match 'System\.Windows\.Forms\.Timer') "Notificatio
 Assert-True ($scriptContent -match '\.AutoEllipsis\s*=\s*\$true') "Notification should handle long device names."
 Assert-True ($scriptContent -match 'notificationForm\.Dispose') "Notification form cleanup is missing."
 Assert-True ($scriptContent -match 'NotificationPosition') "Notification position setting is missing."
+Assert-True ($scriptContent -match 'SetHighDpiMode') "DPI awareness setup is missing."
+Assert-True ($scriptContent -match 'PerMonitorV2') "DPI awareness should prefer per-monitor scaling."
 Assert-True ($nativeTypeContent -match 'RegisterHotKey') "Hotkey registration entry point is missing."
 Assert-True ($nativeTypeContent -match 'MOD_NOREPEAT') "Hotkey repeat suppression is missing."
 Assert-True ($nativeTypeContent -match 'IsExcluded') "Device exclusion filtering is missing."

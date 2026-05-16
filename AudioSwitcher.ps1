@@ -8,6 +8,12 @@ $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+try {
+    [System.Windows.Forms.Application]::SetHighDpiMode([System.Windows.Forms.HighDpiMode]::PerMonitorV2) | Out-Null
+}
+catch {
+}
+
 function Resolve-WindowsFormsReferences {
     $references = [System.Collections.Generic.List[string]]::new()
     $references.Add("System.Windows.Forms.dll")
