@@ -37,7 +37,24 @@ Assert-True $typeDefinitionMatch.Success "Could not extract embedded C# type def
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
-Add-Type -ReferencedAssemblies @("System.Windows.Forms.dll") -TypeDefinition $typeDefinitionMatch.Groups["code"].Value
+
+function Resolve-WindowsFormsReferences {
+    $references = [System.Collections.Generic.List[string]]::new()
+    $references.Add("System.Windows.Forms.dll")
+
+    try {
+        $primitives = [System.Reflection.Assembly]::Load("System.Windows.Forms.Primitives")
+        if ($primitives.Location) {
+            $references.Add($primitives.Location)
+        }
+    }
+    catch {
+    }
+
+    $references.ToArray()
+}
+
+Add-Type -ReferencedAssemblies (Resolve-WindowsFormsReferences) -TypeDefinition $typeDefinitionMatch.Groups["code"].Value
 
 Assert-True (("PortableAudioSwitcher.AudioSwitcher" -as [type]) -ne $null) "AudioSwitcher type was not compiled."
 Assert-True (("PortableAudioSwitcher.HotkeyWindow" -as [type]) -ne $null) "HotkeyWindow type was not compiled."
