@@ -127,6 +127,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall-Autostart.ps
 
 The normal GitHub Actions test pipeline builds a portable `AudioSwitcher.zip` after the smoke test and uploads it as an artifact.
 
+The ZIP file is not stored directly in the repository. Open GitHub, go to `Actions`, select the latest successful `Test` run, and download the `AudioSwitcher` artifact. That artifact contains the portable `AudioSwitcher.zip`.
+
 Tagged releases are handled by `.github/workflows/release.yml`. A tag like `v1.0.0` creates a GitHub Release with the ZIP attached.
 
 ```powershell

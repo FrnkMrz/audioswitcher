@@ -6,6 +6,7 @@ $nativeTypePath = Join-Path $repoRoot "AudioSwitcher.Native.cs"
 $configPath = Join-Path $repoRoot "config.json"
 $readmePath = Join-Path $repoRoot "README.md"
 $englishReadmePath = Join-Path $repoRoot "README.en.md"
+$gitignorePath = Join-Path $repoRoot ".gitignore"
 $launcherPath = Join-Path $repoRoot "Start-AudioSwitcher.bat"
 $installAutostartPath = Join-Path $repoRoot "Install-Autostart.ps1"
 $uninstallAutostartPath = Join-Path $repoRoot "Uninstall-Autostart.ps1"
@@ -46,6 +47,7 @@ Assert-True (Test-Path $nativeTypePath) "AudioSwitcher.Native.cs was not found."
 Assert-True (Test-Path $configPath) "config.json was not found."
 Assert-True (Test-Path $readmePath) "README.md was not found."
 Assert-True (Test-Path $englishReadmePath) "README.en.md was not found."
+Assert-True (Test-Path $gitignorePath) ".gitignore was not found."
 Assert-True (Test-Path $launcherPath) "Start-AudioSwitcher.bat was not found."
 Assert-True (Test-Path $installAutostartPath) "Install-Autostart.ps1 was not found."
 Assert-True (Test-Path $uninstallAutostartPath) "Uninstall-Autostart.ps1 was not found."
@@ -56,6 +58,7 @@ $nativeTypeContent = Get-Content -LiteralPath $nativeTypePath -Raw
 $configContent = Get-Content -LiteralPath $configPath -Raw
 $readmeContent = Get-Content -LiteralPath $readmePath -Raw
 $englishReadmeContent = Get-Content -LiteralPath $englishReadmePath -Raw
+$gitignoreContent = Get-Content -LiteralPath $gitignorePath -Raw
 $installAutostartContent = Get-Content -LiteralPath $installAutostartPath -Raw
 $uninstallAutostartContent = Get-Content -LiteralPath $uninstallAutostartPath -Raw
 $releaseWorkflowContent = Get-Content -LiteralPath $releaseWorkflowPath -Raw
@@ -111,10 +114,16 @@ Assert-True ($uninstallAutostartContent -match 'Remove-Item') "Autostart uninsta
 Assert-True ($readmeContent -match 'Deutscher Quickguide') "German quick guide is missing."
 Assert-True ($readmeContent -match 'README\.en\.md') "German README should link the English documentation."
 Assert-True ($readmeContent -match 'Release-ZIP') "German README should document release ZIPs."
+Assert-True ($readmeContent -match 'Actions[\s\S]+Artifacts[\s\S]+AudioSwitcher') "German README should explain where to find the Actions ZIP artifact."
 Assert-True ($englishReadmeContent -match 'Audio Switcher for Windows 11') "English README title is missing."
 Assert-True ($englishReadmeContent -match 'Quick Start') "English quick start is missing."
 Assert-True ($englishReadmeContent -match 'GitHub Actions test pipeline builds a portable') "English README should document CI ZIP artifacts."
+Assert-True ($englishReadmeContent -match 'not stored directly in the repository') "English README should explain that ZIP artifacts are not committed."
 Assert-True ($englishReadmeContent -match 'README\.md') "English README should link the German documentation."
+Assert-True ($gitignoreContent -match 'AudioSwitcher\.zip') ".gitignore should ignore the generated ZIP."
+Assert-True ($gitignoreContent -match '\*\.log') ".gitignore should ignore local logs."
+Assert-True ($gitignoreContent -match '\.DS_Store') ".gitignore should ignore macOS metadata."
+Assert-True ($gitignoreContent -match '\*\.icloud') ".gitignore should ignore iCloud placeholder files."
 Assert-True ($releaseWorkflowContent -match 'Compress-Archive') "Release workflow should build a ZIP file."
 Assert-True ($releaseWorkflowContent -match 'README\.en\.md') "Release ZIP should include English documentation."
 Assert-True ($releaseWorkflowContent -match 'actions/upload-artifact@v4') "Release workflow should upload the ZIP artifact."

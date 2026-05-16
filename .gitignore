@@ -1,0 +1,50 @@
+# Portable build artifacts
+AudioSwitcher.zip
+*.zip
+*.7z
+*.tar
+*.tar.gz
+
+# PowerShell runtime output
+*.log
+*.tmp
+*.temp
+*.bak
+*.ps1xml
+*.clixml
+Transcript*.txt
+
+# Windows shortcuts and local startup links
+*.lnk
+
+# .NET / C# temporary build output
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# Test and coverage output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# Editor and IDE state
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# iCloud / sync leftovers
+.icloud
+*.icloud
+*.tmp.drivedownload
+*.tmp.driveupload
