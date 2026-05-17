@@ -1,5 +1,7 @@
 param(
     [string]$Hotkey,
+    [string]$OutputHotkey,
+    [string]$InputHotkey,
     [switch]$NoTray
 )
 
@@ -39,10 +41,14 @@ Add-Type -ReferencedAssemblies (Resolve-WindowsFormsReferences) -Path $nativeTyp
 
 function Get-AudioSwitcherConfig {
     $defaults = [pscustomobject]@{
-        Hotkey = "Ctrl+Alt+A"
+        OutputHotkey = "Ctrl+Alt+A"
+        InputHotkey = "Ctrl+Alt+M"
         ShowTray = $true
         NotificationDurationMs = 1800
         NotificationPosition = "BottomRight"
+        ExcludedOutputDeviceNamePatterns = @()
+        ExcludedInputDeviceNamePatterns = @()
+        # Legacy setting kept so older config.json files still work.
         ExcludedDeviceNamePatterns = @()
     }
 
@@ -62,6 +68,14 @@ function Get-AudioSwitcherConfig {
         if ($null -ne $fileConfig.$property) {
             $defaults.$property = $fileConfig.$property
         }
+    }
+
+    if ($null -eq $fileConfig.OutputHotkey -and $null -ne $fileConfig.Hotkey) {
+        $defaults.OutputHotkey = $fileConfig.Hotkey
+    }
+
+    if (($null -eq $fileConfig.ExcludedOutputDeviceNamePatterns) -and ($null -ne $fileConfig.ExcludedDeviceNamePatterns)) {
+        $defaults.ExcludedOutputDeviceNamePatterns = $fileConfig.ExcludedDeviceNamePatterns
     }
 
     $defaults
@@ -146,14 +160,24 @@ function Show-SwitchNotification {
     $form.Height = 86
 
     $titleLabel = [System.Windows.Forms.Label]::new()
-    $titleLabel.Text = "Aktuelle Audioausgabe"
+    $title = "Aktuelle Audioausgabe"
+    $displayMessage = $Message
+    if ($Message -match '^Mikrofon:\s*(.+)$') {
+        $title = "Aktuelles Mikrofon"
+        $displayMessage = $Matches[1]
+    }
+    elseif ($Message -match '^Audioausgabe:\s*(.+)$') {
+        $displayMessage = $Matches[1]
+    }
+
+    $titleLabel.Text = $title
     $titleLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 190, 205)
     $titleLabel.Font = [System.Drawing.Font]::new("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
     $titleLabel.Location = [System.Drawing.Point]::new(18, 12)
     $titleLabel.Size = [System.Drawing.Size]::new(404, 18)
 
     $messageLabel = [System.Windows.Forms.Label]::new()
-    $messageLabel.Text = $Message -replace '^Audioausgabe:\s*', ''
+    $messageLabel.Text = $displayMessage
     $messageLabel.ForeColor = [System.Drawing.Color]::White
     $messageLabel.Font = [System.Drawing.Font]::new("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $messageLabel.Location = [System.Drawing.Point]::new(18, 34)
@@ -203,42 +227,88 @@ function Show-SwitchNotification {
     $timer.Start()
 }
 
+function New-AudioSwitcherHotkeyWindow {
+    param(
+        [string]$Label,
+        [string]$HotkeyText,
+        [int]$Id,
+        [PortableAudioSwitcher.AudioDeviceKind]$DeviceKind
+    )
+
+    $hotkeyParts = ConvertTo-HotkeyParts -HotkeyText $HotkeyText
+    try {
+        [PortableAudioSwitcher.HotkeyWindow]::new($Id, $hotkeyParts.Modifiers, $hotkeyParts.Key, $DeviceKind)
+    }
+    catch [System.Management.Automation.MethodInvocationException] {
+        if ($_.Exception.InnerException -and $_.Exception.InnerException.Message -like "Hotkey konnte nicht registriert werden*") {
+            throw "Der $Label-Hotkey $HotkeyText ist bereits belegt. Bitte waehlen Sie eine andere Kombination."
+        }
+
+        throw
+    }
+    catch [System.InvalidOperationException] {
+        if ($_.Exception.Message -like "Hotkey konnte nicht registriert werden*") {
+            throw "Der $Label-Hotkey $HotkeyText ist bereits belegt. Bitte waehlen Sie eine andere Kombination."
+        }
+
+        throw
+    }
+}
+
 $script:config = Get-AudioSwitcherConfig
-if ($Hotkey) {
-    $script:config.Hotkey = $Hotkey
+if ($Hotkey -and -not $OutputHotkey) {
+    $OutputHotkey = $Hotkey
+}
+if ($OutputHotkey) {
+    $script:config.OutputHotkey = $OutputHotkey
+}
+if ($InputHotkey) {
+    $script:config.InputHotkey = $InputHotkey
 }
 if ($NoTray) {
     $script:config.ShowTray = $false
 }
 
-[PortableAudioSwitcher.AudioSwitcherSettings]::ExcludedDeviceNamePatterns = @($script:config.ExcludedDeviceNamePatterns)
+$OutputHotkey = $script:config.OutputHotkey
+$InputHotkey = $script:config.InputHotkey
 
-$Hotkey = $script:config.Hotkey
-$hotkeyParts = ConvertTo-HotkeyParts -HotkeyText $Hotkey
+if ($OutputHotkey -eq $InputHotkey) {
+    throw "OutputHotkey und InputHotkey duerfen nicht identisch sein. Bitte waehlen Sie zwei unterschiedliche Kombinationen."
+}
+
+$excludedOutputPatterns = @($script:config.ExcludedOutputDeviceNamePatterns)
+if ($excludedOutputPatterns.Count -eq 0 -and $script:config.ExcludedDeviceNamePatterns) {
+    $excludedOutputPatterns = @($script:config.ExcludedDeviceNamePatterns)
+}
+
+[PortableAudioSwitcher.AudioSwitcherSettings]::ExcludedOutputDeviceNamePatterns = $excludedOutputPatterns
+[PortableAudioSwitcher.AudioSwitcherSettings]::ExcludedInputDeviceNamePatterns = @($script:config.ExcludedInputDeviceNamePatterns)
+
+$outputWindow = $null
+$inputWindow = $null
 try {
-    $window = [PortableAudioSwitcher.HotkeyWindow]::new(41011, $hotkeyParts.Modifiers, $hotkeyParts.Key)
+    $outputWindow = New-AudioSwitcherHotkeyWindow -Label "Audioausgabe" -HotkeyText $OutputHotkey -Id 41011 -DeviceKind ([PortableAudioSwitcher.AudioDeviceKind]::Output)
+    $inputWindow = New-AudioSwitcherHotkeyWindow -Label "Mikrofon" -HotkeyText $InputHotkey -Id 41012 -DeviceKind ([PortableAudioSwitcher.AudioDeviceKind]::Input)
 }
-catch [System.Management.Automation.MethodInvocationException] {
-    if ($_.Exception.InnerException -and $_.Exception.InnerException.Message -like "Hotkey konnte nicht registriert werden*") {
-        throw "Der Hotkey $Hotkey ist bereits belegt. Bitte waehlen Sie eine andere Kombination."
+catch {
+    if ($outputWindow) {
+        $outputWindow.Dispose()
     }
-
-    throw
-}
-catch [System.InvalidOperationException] {
-    if ($_.Exception.Message -like "Hotkey konnte nicht registriert werden*") {
-        throw "Der Hotkey $Hotkey ist bereits belegt. Bitte waehlen Sie eine andere Kombination."
+    if ($inputWindow) {
+        $inputWindow.Dispose()
     }
 
     throw
 }
 
 $tray = $null
+$script:tray = $null
 if ($script:config.ShowTray) {
     $tray = [System.Windows.Forms.NotifyIcon]::new()
     $tray.Icon = [System.Drawing.SystemIcons]::Application
-    $tray.Text = "Audio Switcher ($Hotkey)"
+    $tray.Text = "Audio Switcher ($OutputHotkey / $InputHotkey)"
     $tray.Visible = $true
+    $script:tray = $tray
 
     $menu = [System.Windows.Forms.ContextMenuStrip]::new()
     $quitItem = [System.Windows.Forms.ToolStripMenuItem]::new("Beenden")
@@ -249,7 +319,7 @@ if ($script:config.ShowTray) {
     $tray.ContextMenuStrip = $menu
 }
 
-$window.add_Switched({
+$switchHandler = {
     param($sender, $eventArgs)
     Write-Host $eventArgs.Message
     Show-SwitchNotification -Message $eventArgs.Message
@@ -258,10 +328,13 @@ $window.add_Switched({
         $script:tray.BalloonTipText = $eventArgs.Message
         $script:tray.ShowBalloonTip(1200)
     }
-})
+}
+
+$outputWindow.add_Switched($switchHandler)
+$inputWindow.add_Switched($switchHandler)
 
 try {
-    Write-Host "Audio Switcher laeuft. Hotkey: $Hotkey"
+    Write-Host "Audio Switcher laeuft. Ausgabe-Hotkey: $OutputHotkey | Mikrofon-Hotkey: $InputHotkey"
     Write-Host "Zum Beenden das Tray-Menue verwenden oder dieses Fenster schliessen."
     [System.Windows.Forms.Application]::Run()
 }
@@ -269,6 +342,7 @@ finally {
     if ($tray) {
         $tray.Visible = $false
         $tray.Dispose()
+        $script:tray = $null
     }
     if ($notificationTimer) {
         $notificationTimer.Stop()
@@ -278,5 +352,10 @@ finally {
         $notificationForm.Close()
         $notificationForm.Dispose()
     }
-    $window.Dispose()
+    if ($outputWindow) {
+        $outputWindow.Dispose()
+    }
+    if ($inputWindow) {
+        $inputWindow.Dispose()
+    }
 }

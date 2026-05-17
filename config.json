@@ -1,7 +1,9 @@
 {
-  "Hotkey": "Ctrl+Alt+A",
+  "OutputHotkey": "Ctrl+Alt+A",
+  "InputHotkey": "Ctrl+Alt+M",
   "ShowTray": true,
   "NotificationDurationMs": 1800,
   "NotificationPosition": "BottomRight",
-  "ExcludedDeviceNamePatterns": []
+  "ExcludedOutputDeviceNamePatterns": [],
+  "ExcludedInputDeviceNamePatterns": []
 }

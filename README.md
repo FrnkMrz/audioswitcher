@@ -2,7 +2,7 @@
 
 [![Test](https://github.com/FrnkMrz/audioswitcher/actions/workflows/test.yml/badge.svg)](https://github.com/FrnkMrz/audioswitcher/actions/workflows/test.yml)
 
-Ein kleines, portables PowerShell-Tool, das per globalem Hotkey sofort zum naechsten aktiven Windows-Ausgabegeraet wechselt. Praktisch fuer Setups mit Lautsprechern, Headset, Monitor-Audio, Dockingstation oder Bluetooth-Kopfhoerern.
+Ein kleines, portables PowerShell-Tool, das per globalem Hotkey sofort zum naechsten aktiven Windows-Ausgabegeraet oder Mikrofon wechselt. Praktisch fuer Setups mit Lautsprechern, Headset, Monitor-Audio, Dockingstation, Bluetooth-Kopfhoerern oder mehreren Mikrofonen.
 
 English documentation: [README.en.md](README.en.md)
 
@@ -12,8 +12,9 @@ English documentation: [README.en.md](README.en.md)
 2. Ordner auf dem Windows-11-Laptop entpacken bzw. oeffnen.
 3. `Start-AudioSwitcher.bat` doppelklicken.
 4. Mit `Ctrl+Alt+A` zum naechsten aktiven Ausgabegeraet wechseln.
-5. Nach jedem Tastendruck zeigt eine kleine Einblendung das neue aktuelle Ausgabegeraet.
-6. Rechtsklick auf das Tray-Symbol und `Beenden`, wenn das Tool beendet werden soll.
+5. Mit `Ctrl+Alt+M` zum naechsten aktiven Mikrofon wechseln.
+6. Nach jedem Tastendruck zeigt eine kleine Einblendung das neue aktuelle Geraet.
+7. Rechtsklick auf das Tray-Symbol und `Beenden`, wenn das Tool beendet werden soll.
 
 Autostart einrichten:
 
@@ -33,9 +34,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall-Autostart.ps
 - keine Installation, keine externen Tools
 - globaler, frei waehlbarer Hotkey
 - zyklischer Wechsel durch alle aktiven Ausgabegeraete
+- eigener Hotkey fuer aktive Mikrofone und Aufnahmegeraete
 - setzt Standardgeraet fuer Konsole, Multimedia und Kommunikation
-- zeigt nach jedem Wechsel kurz das aktuell aktive Ausgabegeraet an
-- kann bestimmte Ausgabegeraete per Namensmuster auslassen
+- zeigt nach jedem Wechsel kurz das aktuell aktive Ausgabe- oder Eingabegeraet an
+- kann bestimmte Ausgabe- und Eingabegeraete per Namensmuster auslassen
 - laeuft im Hintergrund mit Tray-Symbol
 - portabel als PowerShell-Skript plus optionaler Startdatei
 - Release-ZIP wird durch GitHub Actions gebaut
@@ -50,13 +52,14 @@ cd audioswitcher
 .\Start-AudioSwitcher.bat
 ```
 
-Standard-Hotkey:
+Standard-Hotkeys:
 
 ```text
-Ctrl+Alt+A
+Ctrl+Alt+A = Audioausgabe wechseln
+Ctrl+Alt+M = Mikrofon wechseln
 ```
 
-Nach jedem Tastendruck wird das naechste aktive Ausgabegeraet als Standard gesetzt und kurz unten rechts eingeblendet.
+Nach jedem Tastendruck wird das naechste aktive Geraet als Standard gesetzt und kurz unten rechts eingeblendet.
 
 ## Direkt per PowerShell starten
 
@@ -64,10 +67,10 @@ Nach jedem Tastendruck wird das naechste aktive Ausgabegeraet als Standard geset
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\AudioSwitcher.ps1
 ```
 
-Mit eigenem Hotkey:
+Mit eigenen Hotkeys:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\AudioSwitcher.ps1 -Hotkey "Ctrl+Alt+F8"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\AudioSwitcher.ps1 -OutputHotkey "Ctrl+Alt+F8" -InputHotkey "Ctrl+Alt+F9"
 ```
 
 Ohne Tray-Symbol:
@@ -82,26 +85,31 @@ Die Datei `config.json` steuert die Standardwerte:
 
 ```json
 {
-  "Hotkey": "Ctrl+Alt+A",
+  "OutputHotkey": "Ctrl+Alt+A",
+  "InputHotkey": "Ctrl+Alt+M",
   "ShowTray": true,
   "NotificationDurationMs": 1800,
   "NotificationPosition": "BottomRight",
-  "ExcludedDeviceNamePatterns": []
+  "ExcludedOutputDeviceNamePatterns": [],
+  "ExcludedInputDeviceNamePatterns": []
 }
 ```
 
 `NotificationPosition` akzeptiert `BottomRight`, `BottomLeft`, `TopRight` und `TopLeft`.
 
-Geraete koennen mit Wildcards aus der Rotation genommen werden:
+Geraete koennen getrennt fuer Ausgabe und Eingabe mit Wildcards aus der Rotation genommen werden:
 
 ```json
-"ExcludedDeviceNamePatterns": [
+"ExcludedOutputDeviceNamePatterns": [
   "*Monitor*",
   "DELL*"
+],
+"ExcludedInputDeviceNamePatterns": [
+  "*Webcam*"
 ]
 ```
 
-Kommandozeilenwerte wie `-Hotkey` und `-NoTray` ueberschreiben die Config fuer diesen Start.
+Kommandozeilenwerte wie `-OutputHotkey`, `-InputHotkey` und `-NoTray` ueberschreiben die Config fuer diesen Start. Alte Configs mit `Hotkey` funktionieren weiter; dieser Wert wird als Ausgabe-Hotkey gelesen.
 
 ## Hotkeys
 
@@ -114,21 +122,22 @@ Modifier werden mit `+` kombiniert.
 | `Shift` | `Umschalt` |
 | `Win` | `Windows`, `Meta` |
 
-Beispiele:
+Standard und Beispiele:
 
 ```text
-Ctrl+Alt+A
-Ctrl+Alt+F8
-Win+Shift+S
+Ctrl+Alt+A = Ausgabe
+Ctrl+Alt+M = Mikrofon
+Ctrl+Alt+F8 = eigener Ausgabe-Hotkey
+Ctrl+Alt+F9 = eigener Mikrofon-Hotkey
 ```
 
 Wenn ein Hotkey schon von Windows oder einem anderen Programm belegt ist, meldet das Skript beim Start:
 
 ```text
-Der Hotkey Ctrl+Alt+A ist bereits belegt. Bitte waehlen Sie eine andere Kombination.
+Der Audioausgabe-Hotkey Ctrl+Alt+A ist bereits belegt. Bitte waehlen Sie eine andere Kombination.
 ```
 
-Waehle dann in `config.json` oder per `-Hotkey` eine andere Kombination.
+Waehle dann in `config.json` oder per `-OutputHotkey` bzw. `-InputHotkey` eine andere Kombination.
 
 ## Autostart
 
@@ -165,7 +174,7 @@ Rechtsklick auf das Tray-Symbol und `Beenden` waehlen. Alternativ kann das Power
 
 Das Skript verwendet lokale Windows-CoreAudio-Schnittstellen:
 
-1. aktive Wiedergabegeraete abrufen
+1. aktive Wiedergabe- oder Aufnahmegeraete abrufen
 2. aktuelles Standardgeraet erkennen
 3. naechstes Geraet in der Liste bestimmen
 4. neues Standardgeraet fuer alle relevanten Audio-Rollen setzen
@@ -185,7 +194,7 @@ Die GitHub-Actions-Pipeline laeuft auf `windows-latest` und fuehrt einen Smoke-T
 - Hotkey-Parsing wird mit gueltigen und ungueltigen Kombinationen getestet
 - der native C#-Code wird kompiliert
 - die Windows-API-Typen werden kompiliert
-- wichtige Einstiegspunkte wie Hotkey-Registrierung, Anzeige und Audio-Umschaltung werden statisch geprueft
+- wichtige Einstiegspunkte wie Hotkey-Registrierung, Anzeige, Ausgabe-Umschaltung und Mikrofon-Umschaltung werden statisch geprueft
 - danach wird ein portables ZIP-Artefakt gebaut
 
 Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiogeraet auf dem Runner.
@@ -208,4 +217,4 @@ Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiog
 
 ## Hinweise
 
-Nur aktive Ausgabegeraete werden beruecksichtigt. Deaktivierte, getrennte oder reine Aufnahmegeraete werden nicht in die Rotation aufgenommen.
+Nur aktive Ausgabe- und Eingabegeraete werden beruecksichtigt. Deaktivierte, getrennte oder jeweils unpassende Geraete werden nicht in die Rotation aufgenommen.

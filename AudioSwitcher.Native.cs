@@ -17,6 +17,7 @@ namespace PortableAudioSwitcher
         private const int WM_HOTKEY = 0x0312;
         private const uint MOD_NOREPEAT = 0x4000;
         private readonly int id;
+        private readonly AudioDeviceKind deviceKind;
         private bool disposed;
 
         [DllImport("user32.dll", SetLastError = true)]
@@ -27,9 +28,10 @@ namespace PortableAudioSwitcher
 
         public event EventHandler<SwitchEventArgs> Switched;
 
-        public HotkeyWindow(int id, uint modifiers, uint key)
+        public HotkeyWindow(int id, uint modifiers, uint key, AudioDeviceKind deviceKind)
         {
             this.id = id;
+            this.deviceKind = deviceKind;
             CreateHandle(new CreateParams());
 
             if (!RegisterHotKey(Handle, id, modifiers | MOD_NOREPEAT, key))
@@ -47,11 +49,18 @@ namespace PortableAudioSwitcher
                 string message;
                 try
                 {
-                    message = AudioSwitcher.SwitchToNext(AudioSwitcherSettings.ExcludedDeviceNamePatterns);
+                    if (deviceKind == AudioDeviceKind.Input)
+                    {
+                        message = AudioSwitcher.SwitchInputToNext(AudioSwitcherSettings.ExcludedInputDeviceNamePatterns);
+                    }
+                    else
+                    {
+                        message = AudioSwitcher.SwitchOutputToNext(AudioSwitcherSettings.ExcludedOutputDeviceNamePatterns);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    message = "Audio-Wechsel fehlgeschlagen: " + ex.Message;
+                    message = GetFailurePrefix() + ex.Message;
                 }
 
                 EventHandler<SwitchEventArgs> handler = Switched;
@@ -68,6 +77,13 @@ namespace PortableAudioSwitcher
             UnregisterHotKey(Handle, id);
             DestroyHandle();
         }
+
+        private string GetFailurePrefix()
+        {
+            return deviceKind == AudioDeviceKind.Input
+                ? "Mikrofon-Wechsel fehlgeschlagen: "
+                : "Audioausgabe-Wechsel fehlgeschlagen: ";
+        }
     }
 
     public static class AudioSwitcher
@@ -76,7 +92,32 @@ namespace PortableAudioSwitcher
         private static readonly PROPERTYKEY PKEY_Device_FriendlyName =
             new PROPERTYKEY(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 14);
 
-        public static string SwitchToNext(string[] excludedDeviceNamePatterns)
+        public static string SwitchOutputToNext(string[] excludedDeviceNamePatterns)
+        {
+            return SwitchToNext(
+                EDataFlow.eRender,
+                excludedDeviceNamePatterns,
+                "Keine aktiven Ausgabegeraete gefunden.",
+                "Keine aktiven Ausgabegeraete nach Anwendung der Ausschlussliste gefunden.",
+                "Audioausgabe");
+        }
+
+        public static string SwitchInputToNext(string[] excludedDeviceNamePatterns)
+        {
+            return SwitchToNext(
+                EDataFlow.eCapture,
+                excludedDeviceNamePatterns,
+                "Keine aktiven Mikrofone gefunden.",
+                "Keine aktiven Mikrofone nach Anwendung der Ausschlussliste gefunden.",
+                "Mikrofon");
+        }
+
+        private static string SwitchToNext(
+            EDataFlow dataFlow,
+            string[] excludedDeviceNamePatterns,
+            string noDevicesMessage,
+            string noDevicesAfterExclusionsMessage,
+            string messagePrefix)
         {
             IMMDeviceEnumerator enumerator = null;
             IMMDeviceCollection collection = null;
@@ -86,13 +127,13 @@ namespace PortableAudioSwitcher
             try
             {
                 enumerator = (IMMDeviceEnumerator)(new MMDeviceEnumerator());
-                enumerator.EnumAudioEndpoints(EDataFlow.eRender, DEVICE_STATE_ACTIVE, out collection);
+                enumerator.EnumAudioEndpoints(dataFlow, DEVICE_STATE_ACTIVE, out collection);
 
                 uint count;
                 collection.GetCount(out count);
-                if (count == 0) throw new InvalidOperationException("Keine aktiven Ausgabegeraete gefunden.");
+                if (count == 0) throw new InvalidOperationException(noDevicesMessage);
 
-                enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender, ERole.eConsole, out defaultDevice);
+                enumerator.GetDefaultAudioEndpoint(dataFlow, ERole.eConsole, out defaultDevice);
                 string defaultId;
                 defaultDevice.GetId(out defaultId);
 
@@ -126,7 +167,7 @@ namespace PortableAudioSwitcher
 
                 if (devices.Count == 0)
                 {
-                    throw new InvalidOperationException("Keine aktiven Ausgabegeraete nach Anwendung der Ausschlussliste gefunden.");
+                    throw new InvalidOperationException(noDevicesAfterExclusionsMessage);
                 }
 
                 int nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % devices.Count;
@@ -137,7 +178,7 @@ namespace PortableAudioSwitcher
                 ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eMultimedia), "eMultimedia");
                 ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eCommunications), "eCommunications");
 
-                return "Audioausgabe: " + next.Name;
+                return messagePrefix + ": " + next.Name;
             }
             finally
             {
@@ -229,7 +270,14 @@ namespace PortableAudioSwitcher
 
     public static class AudioSwitcherSettings
     {
-        public static string[] ExcludedDeviceNamePatterns = new string[0];
+        public static string[] ExcludedOutputDeviceNamePatterns = new string[0];
+        public static string[] ExcludedInputDeviceNamePatterns = new string[0];
+    }
+
+    public enum AudioDeviceKind
+    {
+        Output = 0,
+        Input = 1
     }
 
     internal enum EDataFlow
