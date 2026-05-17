@@ -154,6 +154,32 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
+## Troubleshooting
+
+### Hotkey Already Used
+
+If startup says that a hotkey is already used, Windows or another app has reserved that key combination. Choose different values for `OutputHotkey` or `InputHotkey` in `config.json`, for example `Ctrl+Alt+F8` and `Ctrl+Alt+F9`.
+
+### PowerShell Blocks Startup
+
+Prefer launching `Start-AudioSwitcher.bat`, because it already starts PowerShell with `ExecutionPolicy Bypass`. If Windows blocks downloaded files, open PowerShell in the extracted folder and run:
+
+```powershell
+Get-ChildItem -File | Unblock-File
+```
+
+### Microphone Does Not Appear
+
+Only active recording devices are included. Check Windows `Settings` -> `System` -> `Sound` -> `Input` and make sure the microphone is enabled and connected. Use `-ListDevices` to see which microphones the tool currently detects, and check `ExcludedInputDeviceNamePatterns` in `config.json` if needed.
+
+### Find The ZIP In GitHub Actions
+
+The ZIP is not stored directly in the repository. Open GitHub `Actions`, select the latest successful `Test` run, and download the `AudioSwitcher` entry under `Artifacts`. That download contains the portable `AudioSwitcher.zip`.
+
+### Check Startup
+
+Startup uses a shortcut in the Windows Startup folder. `Install-Autostart.ps1` creates it, and `Uninstall-Autostart.ps1` removes it. To inspect it manually, press `Win+R`, enter `shell:startup`, and check whether `Audio Switcher.lnk` exists.
+
 ## How It Works
 
 The tool uses Windows CoreAudio and Win32 APIs:

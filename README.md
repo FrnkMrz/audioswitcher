@@ -175,6 +175,32 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
+## Troubleshooting
+
+### Hotkey belegt
+
+Wenn beim Start die Meldung erscheint, dass ein Hotkey bereits belegt ist, nutzt Windows oder ein anderes Programm diese Tastenkombination schon. Waehle in `config.json` andere Werte fuer `OutputHotkey` oder `InputHotkey`, zum Beispiel `Ctrl+Alt+F8` und `Ctrl+Alt+F9`.
+
+### PowerShell blockiert Start
+
+Starte am einfachsten `Start-AudioSwitcher.bat`, weil die Datei PowerShell bereits mit `ExecutionPolicy Bypass` aufruft. Wenn Windows heruntergeladene Dateien blockiert, oeffne PowerShell im entpackten Ordner und fuehre aus:
+
+```powershell
+Get-ChildItem -File | Unblock-File
+```
+
+### Mikrofon erscheint nicht
+
+Es werden nur aktive Aufnahmegeraete beruecksichtigt. Pruefe in Windows unter `Einstellungen` -> `System` -> `Sound` -> `Eingabe`, ob das Mikrofon aktiviert und verbunden ist. Mit `-ListDevices` kannst du sehen, welche Mikrofone das Tool aktuell findet; pruefe bei Bedarf auch `ExcludedInputDeviceNamePatterns` in `config.json`.
+
+### ZIP in GitHub Actions finden
+
+Die ZIP liegt nicht direkt im Repository. Oeffne in GitHub `Actions`, waehle den letzten erfolgreichen `Test`-Lauf und lade unten bei `Artifacts` den Eintrag `AudioSwitcher` herunter. Darin liegt die portable `AudioSwitcher.zip`.
+
+### Autostart pruefen
+
+Der Autostart nutzt eine Verknuepfung im Windows-Startup-Ordner. Mit `Install-Autostart.ps1` wird sie angelegt, mit `Uninstall-Autostart.ps1` entfernt. Zum Kontrollieren kannst du `shell:startup` in `Win+R` eingeben und pruefen, ob dort `Audio Switcher.lnk` liegt.
+
 ## Beenden
 
 Rechtsklick auf das Tray-Symbol und `Beenden` waehlen. Alternativ kann das PowerShell-Fenster geschlossen werden.
