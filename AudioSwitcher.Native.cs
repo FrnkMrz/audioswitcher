@@ -112,6 +112,16 @@ namespace PortableAudioSwitcher
                 "Mikrofon");
         }
 
+        public static string[] ListOutputDevices()
+        {
+            return ListActiveDeviceNames(EDataFlow.eRender);
+        }
+
+        public static string[] ListInputDevices()
+        {
+            return ListActiveDeviceNames(EDataFlow.eCapture);
+        }
+
         private static string SwitchToNext(
             EDataFlow dataFlow,
             string[] excludedDeviceNamePatterns,
@@ -184,6 +194,43 @@ namespace PortableAudioSwitcher
             {
                 ReleaseComObject(policyConfig);
                 ReleaseComObject(defaultDevice);
+                ReleaseComObject(collection);
+                ReleaseComObject(enumerator);
+            }
+        }
+
+        private static string[] ListActiveDeviceNames(EDataFlow dataFlow)
+        {
+            IMMDeviceEnumerator enumerator = null;
+            IMMDeviceCollection collection = null;
+            List<string> devices = new List<string>();
+
+            try
+            {
+                enumerator = (IMMDeviceEnumerator)(new MMDeviceEnumerator());
+                enumerator.EnumAudioEndpoints(dataFlow, DEVICE_STATE_ACTIVE, out collection);
+
+                uint count;
+                collection.GetCount(out count);
+
+                for (uint i = 0; i < count; i++)
+                {
+                    IMMDevice device = null;
+                    try
+                    {
+                        collection.Item(i, out device);
+                        devices.Add(GetFriendlyName(device));
+                    }
+                    finally
+                    {
+                        ReleaseComObject(device);
+                    }
+                }
+
+                return devices.ToArray();
+            }
+            finally
+            {
                 ReleaseComObject(collection);
                 ReleaseComObject(enumerator);
             }

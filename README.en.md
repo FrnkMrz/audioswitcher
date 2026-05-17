@@ -24,6 +24,7 @@ Ctrl+Alt+M = switch microphone
 ```
 
 Every key press selects the next active device and shows the newly selected device in a small on-screen notification.
+The tray menu also provides direct actions for switching output, switching microphone, and quitting the tool.
 
 ## Features
 
@@ -35,7 +36,8 @@ Every key press selects the next active device and shows the newly selected devi
 - sets the default device for console, multimedia, and communication roles
 - shows the current output or input device after each switch
 - can skip output and input devices by name pattern
-- runs in the background with a tray icon
+- runs in the background with a tray icon and direct switch actions
+- can list active output and input devices with `-ListDevices`
 - optional Windows startup helper scripts
 - CI builds a portable release ZIP
 
@@ -55,6 +57,12 @@ Run without tray icon:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\AudioSwitcher.ps1 -NoTray
+```
+
+List active output and input devices:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\AudioSwitcher.ps1 -ListDevices
 ```
 
 ## Configuration
@@ -88,6 +96,8 @@ Output and input devices can be excluded from their rotations with wildcard patt
 ```
 
 Command-line options such as `-OutputHotkey`, `-InputHotkey`, and `-NoTray` override the config for the current launch only. Old configs with `Hotkey` still work; that value is treated as the output hotkey.
+
+At startup the tool validates the config: hotkeys must not be empty or identical, `NotificationPosition` must be supported, and `NotificationDurationMs` must be at least `500`.
 
 ## Hotkeys
 
@@ -168,6 +178,7 @@ The GitHub Actions pipeline runs on `windows-latest` and performs a smoke test:
 - compiles the native C# code
 - verifies key entry points for hotkey registration, notification display, output switching, and microphone switching
 - builds a portable ZIP artifact
+- includes `VERSION.txt` in the ZIP
 
 The test does not keep the background program running and does not change the runner's audio device.
 
@@ -183,6 +194,7 @@ The test does not keep the background program running and does not change the ru
 | `Uninstall-Autostart.ps1` | Removes the startup shortcut |
 | `README.md` | German documentation with quick guide |
 | `README.en.md` | English documentation |
+| `VERSION.txt` | Version note for the portable ZIP |
 | `Tests/Test-AudioSwitcher.ps1` | CI smoke test |
 | `.github/workflows/test.yml` | Tests the tool and builds a portable ZIP |
 | `.github/workflows/release.yml` | Builds and publishes release ZIPs |

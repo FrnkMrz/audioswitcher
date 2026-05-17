@@ -6,10 +6,12 @@ $nativeTypePath = Join-Path $repoRoot "AudioSwitcher.Native.cs"
 $configPath = Join-Path $repoRoot "config.json"
 $readmePath = Join-Path $repoRoot "README.md"
 $englishReadmePath = Join-Path $repoRoot "README.en.md"
+$versionPath = Join-Path $repoRoot "VERSION.txt"
 $gitignorePath = Join-Path $repoRoot ".gitignore"
 $launcherPath = Join-Path $repoRoot "Start-AudioSwitcher.bat"
 $installAutostartPath = Join-Path $repoRoot "Install-Autostart.ps1"
 $uninstallAutostartPath = Join-Path $repoRoot "Uninstall-Autostart.ps1"
+$testWorkflowPath = Join-Path $repoRoot ".github/workflows/test.yml"
 $releaseWorkflowPath = Join-Path $repoRoot ".github/workflows/release.yml"
 
 function Assert-True {
@@ -47,10 +49,12 @@ Assert-True (Test-Path $nativeTypePath) "AudioSwitcher.Native.cs was not found."
 Assert-True (Test-Path $configPath) "config.json was not found."
 Assert-True (Test-Path $readmePath) "README.md was not found."
 Assert-True (Test-Path $englishReadmePath) "README.en.md was not found."
+Assert-True (Test-Path $versionPath) "VERSION.txt was not found."
 Assert-True (Test-Path $gitignorePath) ".gitignore was not found."
 Assert-True (Test-Path $launcherPath) "Start-AudioSwitcher.bat was not found."
 Assert-True (Test-Path $installAutostartPath) "Install-Autostart.ps1 was not found."
 Assert-True (Test-Path $uninstallAutostartPath) "Uninstall-Autostart.ps1 was not found."
+Assert-True (Test-Path $testWorkflowPath) "Test workflow was not found."
 Assert-True (Test-Path $releaseWorkflowPath) "Release workflow was not found."
 
 $scriptContent = Get-Content -LiteralPath $scriptPath -Raw
@@ -58,9 +62,11 @@ $nativeTypeContent = Get-Content -LiteralPath $nativeTypePath -Raw
 $configContent = Get-Content -LiteralPath $configPath -Raw
 $readmeContent = Get-Content -LiteralPath $readmePath -Raw
 $englishReadmeContent = Get-Content -LiteralPath $englishReadmePath -Raw
+$versionContent = Get-Content -LiteralPath $versionPath -Raw
 $gitignoreContent = Get-Content -LiteralPath $gitignorePath -Raw
 $installAutostartContent = Get-Content -LiteralPath $installAutostartPath -Raw
 $uninstallAutostartContent = Get-Content -LiteralPath $uninstallAutostartPath -Raw
+$testWorkflowContent = Get-Content -LiteralPath $testWorkflowPath -Raw
 $releaseWorkflowContent = Get-Content -LiteralPath $releaseWorkflowPath -Raw
 $parseErrors = $null
 [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$parseErrors) | Out-Null
@@ -74,6 +80,11 @@ Assert-True ($scriptContent -match 'ExcludedInputDeviceNamePatterns') "Input exc
 Assert-True ($scriptContent -match 'ExcludedDeviceNamePatterns') "Legacy excluded device patterns should remain supported."
 Assert-True ($scriptContent -match 'AudioSwitcher\.Native\.cs') "Native C# type file is not loaded."
 Assert-True ($scriptContent -match 'Show-SwitchNotification') "On-screen switch notification is missing."
+Assert-True ($scriptContent -match 'Assert-AudioSwitcherConfig') "Config validation is missing."
+Assert-True ($scriptContent -match 'Write-AudioSwitcherDeviceList') "Device listing command is missing."
+Assert-True ($scriptContent -match 'ListDevices') "ListDevices parameter is missing."
+Assert-True ($scriptContent -match 'Ausgabe wechseln') "Tray output switch action is missing."
+Assert-True ($scriptContent -match 'Mikrofon wechseln') "Tray input switch action is missing."
 Assert-True ($scriptContent -match 'Aktuelles Mikrofon') "Input switch notification title is missing."
 Assert-True ($scriptContent -match 'FormBorderStyle\]::None') "Notification should be borderless."
 Assert-True ($scriptContent -match '\.TopMost\s*=\s*\$true') "Notification should be topmost."
@@ -96,6 +107,8 @@ Assert-True ($nativeTypeContent -match 'MOD_NOREPEAT') "Hotkey repeat suppressio
 Assert-True ($nativeTypeContent -match 'AudioDeviceKind') "Hotkey window should know whether it controls output or input."
 Assert-True ($nativeTypeContent -match 'SwitchOutputToNext') "Output switching entry point is missing."
 Assert-True ($nativeTypeContent -match 'SwitchInputToNext') "Input switching entry point is missing."
+Assert-True ($nativeTypeContent -match 'ListOutputDevices') "Output device listing entry point is missing."
+Assert-True ($nativeTypeContent -match 'ListInputDevices') "Input device listing entry point is missing."
 Assert-True ($nativeTypeContent -match 'EDataFlow\.eRender') "Output switching should enumerate render devices."
 Assert-True ($nativeTypeContent -match 'EDataFlow\.eCapture') "Input switching should enumerate capture devices."
 Assert-True ($nativeTypeContent -match 'IsExcluded') "Device exclusion filtering is missing."
@@ -120,6 +133,7 @@ Assert-True ($config.NotificationDurationMs -ge 500) "config.json notification d
 Assert-True ($config.NotificationPosition -eq "BottomRight") "config.json notification position is incorrect."
 Assert-True (($config.PSObject.Properties.Name -contains "ExcludedOutputDeviceNamePatterns")) "config.json output excluded device list is missing."
 Assert-True (($config.PSObject.Properties.Name -contains "ExcludedInputDeviceNamePatterns")) "config.json input excluded device list is missing."
+Assert-True ($versionContent -match '^AudioSwitcher\s+\d+\.\d+\.\d+') "VERSION.txt should contain a semantic AudioSwitcher version."
 
 Assert-True ($installAutostartContent -match 'WScript\.Shell') "Autostart installer should create a Windows shortcut."
 Assert-True ($installAutostartContent -match 'Startup') "Autostart installer should target the Startup folder."
@@ -130,20 +144,27 @@ Assert-True ($readmeContent -match 'README\.en\.md') "German README should link 
 Assert-True ($readmeContent -match 'Release-ZIP') "German README should document release ZIPs."
 Assert-True ($readmeContent -match 'Ctrl\+Alt\+M') "German README should document the input hotkey."
 Assert-True ($readmeContent -match 'Mikrofon') "German README should document microphone switching."
+Assert-True ($readmeContent -match '-ListDevices') "German README should document device listing."
+Assert-True ($readmeContent -match 'Ausgabe wechseln') "German README should document tray switch actions."
+Assert-True ($readmeContent -match 'VERSION\.txt') "German README should document the version file."
 Assert-True ($readmeContent -match 'Actions[\s\S]+Artifacts[\s\S]+AudioSwitcher') "German README should explain where to find the Actions ZIP artifact."
 Assert-True ($englishReadmeContent -match 'Audio Switcher for Windows 11') "English README title is missing."
 Assert-True ($englishReadmeContent -match 'Quick Start') "English quick start is missing."
 Assert-True ($englishReadmeContent -match 'GitHub Actions test pipeline builds a portable') "English README should document CI ZIP artifacts."
 Assert-True ($englishReadmeContent -match 'Ctrl\+Alt\+M') "English README should document the input hotkey."
 Assert-True ($englishReadmeContent -match 'microphone') "English README should document microphone switching."
+Assert-True ($englishReadmeContent -match '-ListDevices') "English README should document device listing."
+Assert-True ($englishReadmeContent -match 'VERSION\.txt') "English README should document the version file."
 Assert-True ($englishReadmeContent -match 'not stored directly in the repository') "English README should explain that ZIP artifacts are not committed."
 Assert-True ($englishReadmeContent -match 'README\.md') "English README should link the German documentation."
 Assert-True ($gitignoreContent -match 'AudioSwitcher\.zip') ".gitignore should ignore the generated ZIP."
 Assert-True ($gitignoreContent -match '\*\.log') ".gitignore should ignore local logs."
 Assert-True ($gitignoreContent -match '\.DS_Store') ".gitignore should ignore macOS metadata."
 Assert-True ($gitignoreContent -match '\*\.icloud') ".gitignore should ignore iCloud placeholder files."
+Assert-True ($testWorkflowContent -match 'VERSION\.txt') "Test ZIP should include VERSION.txt."
 Assert-True ($releaseWorkflowContent -match 'Compress-Archive') "Release workflow should build a ZIP file."
 Assert-True ($releaseWorkflowContent -match 'README\.en\.md') "Release ZIP should include English documentation."
+Assert-True ($releaseWorkflowContent -match 'VERSION\.txt') "Release ZIP should include VERSION.txt."
 Assert-True ($releaseWorkflowContent -match 'actions/upload-artifact@v4') "Release workflow should upload the ZIP artifact."
 Assert-True ($releaseWorkflowContent -match 'softprops/action-gh-release@v2') "Release workflow should publish tagged releases."
 

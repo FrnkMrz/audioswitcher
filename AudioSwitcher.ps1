@@ -2,6 +2,7 @@ param(
     [string]$Hotkey,
     [string]$OutputHotkey,
     [string]$InputHotkey,
+    [switch]$ListDevices,
     [switch]$NoTray
 )
 
@@ -132,6 +133,58 @@ function ConvertTo-HotkeyParts {
     }
 }
 
+function Assert-AudioSwitcherConfig {
+    $validPositions = @("BottomRight", "BottomLeft", "TopRight", "TopLeft")
+    if ($validPositions -notcontains $script:config.NotificationPosition) {
+        throw "NotificationPosition '$($script:config.NotificationPosition)' ist ungueltig. Erlaubt sind: $($validPositions -join ', ')."
+    }
+
+    if ([int]$script:config.NotificationDurationMs -lt 500) {
+        throw "NotificationDurationMs muss mindestens 500 sein."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($script:config.OutputHotkey)) {
+        throw "OutputHotkey darf nicht leer sein."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($script:config.InputHotkey)) {
+        throw "InputHotkey darf nicht leer sein."
+    }
+
+    if ([string]::Equals($script:config.OutputHotkey.Trim(), $script:config.InputHotkey.Trim(), [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "OutputHotkey und InputHotkey duerfen nicht identisch sein. Bitte waehlen Sie zwei unterschiedliche Kombinationen."
+    }
+
+    [void](ConvertTo-HotkeyParts -HotkeyText $script:config.OutputHotkey)
+    [void](ConvertTo-HotkeyParts -HotkeyText $script:config.InputHotkey)
+}
+
+function Write-AudioSwitcherDeviceList {
+    $outputs = @([PortableAudioSwitcher.AudioSwitcher]::ListOutputDevices())
+    $inputs = @([PortableAudioSwitcher.AudioSwitcher]::ListInputDevices())
+
+    Write-Host "Ausgaben:"
+    if ($outputs.Count -eq 0) {
+        Write-Host "- keine aktiven Ausgabegeraete gefunden"
+    }
+    else {
+        foreach ($device in $outputs) {
+            Write-Host "- $device"
+        }
+    }
+
+    Write-Host ""
+    Write-Host "Mikrofone:"
+    if ($inputs.Count -eq 0) {
+        Write-Host "- keine aktiven Mikrofone gefunden"
+    }
+    else {
+        foreach ($device in $inputs) {
+            Write-Host "- $device"
+        }
+    }
+}
+
 function Show-SwitchNotification {
     param([string]$Message)
 
@@ -227,6 +280,35 @@ function Show-SwitchNotification {
     $timer.Start()
 }
 
+function Publish-SwitchMessage {
+    param([string]$Message)
+
+    Write-Host $Message
+    Show-SwitchNotification -Message $Message
+    if ($script:tray) {
+        $script:tray.BalloonTipTitle = "Audio Switcher"
+        $script:tray.BalloonTipText = $Message
+        $script:tray.ShowBalloonTip(1200)
+    }
+}
+
+function Invoke-AudioSwitcherSwitch {
+    param([PortableAudioSwitcher.AudioDeviceKind]$DeviceKind)
+
+    try {
+        if ($DeviceKind -eq [PortableAudioSwitcher.AudioDeviceKind]::Input) {
+            Publish-SwitchMessage -Message ([PortableAudioSwitcher.AudioSwitcher]::SwitchInputToNext([PortableAudioSwitcher.AudioSwitcherSettings]::ExcludedInputDeviceNamePatterns))
+        }
+        else {
+            Publish-SwitchMessage -Message ([PortableAudioSwitcher.AudioSwitcher]::SwitchOutputToNext([PortableAudioSwitcher.AudioSwitcherSettings]::ExcludedOutputDeviceNamePatterns))
+        }
+    }
+    catch {
+        $prefix = if ($DeviceKind -eq [PortableAudioSwitcher.AudioDeviceKind]::Input) { "Mikrofon-Wechsel fehlgeschlagen: " } else { "Audioausgabe-Wechsel fehlgeschlagen: " }
+        Publish-SwitchMessage -Message ($prefix + $_.Exception.Message)
+    }
+}
+
 function New-AudioSwitcherHotkeyWindow {
     param(
         [string]$Label,
@@ -269,12 +351,10 @@ if ($NoTray) {
     $script:config.ShowTray = $false
 }
 
+Assert-AudioSwitcherConfig
+
 $OutputHotkey = $script:config.OutputHotkey
 $InputHotkey = $script:config.InputHotkey
-
-if ($OutputHotkey -eq $InputHotkey) {
-    throw "OutputHotkey und InputHotkey duerfen nicht identisch sein. Bitte waehlen Sie zwei unterschiedliche Kombinationen."
-}
 
 $excludedOutputPatterns = @($script:config.ExcludedOutputDeviceNamePatterns)
 if ($excludedOutputPatterns.Count -eq 0 -and $script:config.ExcludedDeviceNamePatterns) {
@@ -283,6 +363,11 @@ if ($excludedOutputPatterns.Count -eq 0 -and $script:config.ExcludedDeviceNamePa
 
 [PortableAudioSwitcher.AudioSwitcherSettings]::ExcludedOutputDeviceNamePatterns = $excludedOutputPatterns
 [PortableAudioSwitcher.AudioSwitcherSettings]::ExcludedInputDeviceNamePatterns = @($script:config.ExcludedInputDeviceNamePatterns)
+
+if ($ListDevices) {
+    Write-AudioSwitcherDeviceList
+    return
+}
 
 $outputWindow = $null
 $inputWindow = $null
@@ -311,6 +396,19 @@ if ($script:config.ShowTray) {
     $script:tray = $tray
 
     $menu = [System.Windows.Forms.ContextMenuStrip]::new()
+    $switchOutputItem = [System.Windows.Forms.ToolStripMenuItem]::new("Ausgabe wechseln")
+    $switchOutputItem.add_Click({
+        Invoke-AudioSwitcherSwitch -DeviceKind ([PortableAudioSwitcher.AudioDeviceKind]::Output)
+    })
+    [void]$menu.Items.Add($switchOutputItem)
+
+    $switchInputItem = [System.Windows.Forms.ToolStripMenuItem]::new("Mikrofon wechseln")
+    $switchInputItem.add_Click({
+        Invoke-AudioSwitcherSwitch -DeviceKind ([PortableAudioSwitcher.AudioDeviceKind]::Input)
+    })
+    [void]$menu.Items.Add($switchInputItem)
+    [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
+
     $quitItem = [System.Windows.Forms.ToolStripMenuItem]::new("Beenden")
     $quitItem.add_Click({
         [System.Windows.Forms.Application]::Exit()
@@ -321,13 +419,7 @@ if ($script:config.ShowTray) {
 
 $switchHandler = {
     param($sender, $eventArgs)
-    Write-Host $eventArgs.Message
-    Show-SwitchNotification -Message $eventArgs.Message
-    if ($script:tray) {
-        $script:tray.BalloonTipTitle = "Audio Switcher"
-        $script:tray.BalloonTipText = $eventArgs.Message
-        $script:tray.ShowBalloonTip(1200)
-    }
+    Publish-SwitchMessage -Message $eventArgs.Message
 }
 
 $outputWindow.add_Switched($switchHandler)

@@ -33,6 +33,7 @@ jobs:
             "Uninstall-Autostart.ps1",
             "README.md",
             "README.en.md",
+            "VERSION.txt",
             "LICENSE"
           )
           foreach ($file in $files) {

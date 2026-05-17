@@ -14,7 +14,7 @@ English documentation: [README.en.md](README.en.md)
 4. Mit `Ctrl+Alt+A` zum naechsten aktiven Ausgabegeraet wechseln.
 5. Mit `Ctrl+Alt+M` zum naechsten aktiven Mikrofon wechseln.
 6. Nach jedem Tastendruck zeigt eine kleine Einblendung das neue aktuelle Geraet.
-7. Rechtsklick auf das Tray-Symbol und `Beenden`, wenn das Tool beendet werden soll.
+7. Rechtsklick auf das Tray-Symbol fuer `Ausgabe wechseln`, `Mikrofon wechseln` oder `Beenden`.
 
 Autostart einrichten:
 
@@ -38,7 +38,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall-Autostart.ps
 - setzt Standardgeraet fuer Konsole, Multimedia und Kommunikation
 - zeigt nach jedem Wechsel kurz das aktuell aktive Ausgabe- oder Eingabegeraet an
 - kann bestimmte Ausgabe- und Eingabegeraete per Namensmuster auslassen
-- laeuft im Hintergrund mit Tray-Symbol
+- laeuft im Hintergrund mit Tray-Symbol und direkten Wechselaktionen
+- kann aktive Ausgabe- und Eingabegeraete mit `-ListDevices` anzeigen
 - portabel als PowerShell-Skript plus optionaler Startdatei
 - Release-ZIP wird durch GitHub Actions gebaut
 
@@ -79,6 +80,12 @@ Ohne Tray-Symbol:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\AudioSwitcher.ps1 -NoTray
 ```
 
+Aktive Ausgabe- und Eingabegeraete anzeigen:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\AudioSwitcher.ps1 -ListDevices
+```
+
 ## Konfiguration
 
 Die Datei `config.json` steuert die Standardwerte:
@@ -110,6 +117,8 @@ Geraete koennen getrennt fuer Ausgabe und Eingabe mit Wildcards aus der Rotation
 ```
 
 Kommandozeilenwerte wie `-OutputHotkey`, `-InputHotkey` und `-NoTray` ueberschreiben die Config fuer diesen Start. Alte Configs mit `Hotkey` funktionieren weiter; dieser Wert wird als Ausgabe-Hotkey gelesen.
+
+Beim Start prueft das Tool die Config: Hotkeys duerfen nicht leer oder identisch sein, `NotificationPosition` muss gueltig sein und `NotificationDurationMs` muss mindestens `500` betragen.
 
 ## Hotkeys
 
@@ -170,6 +179,8 @@ git push origin v1.0.0
 
 Rechtsklick auf das Tray-Symbol und `Beenden` waehlen. Alternativ kann das PowerShell-Fenster geschlossen werden.
 
+Im Tray-Menue kannst du auch ohne Tastenkombination direkt `Ausgabe wechseln` oder `Mikrofon wechseln` ausloesen.
+
 ## Wie es funktioniert
 
 Das Skript verwendet lokale Windows-CoreAudio-Schnittstellen:
@@ -196,6 +207,7 @@ Die GitHub-Actions-Pipeline laeuft auf `windows-latest` und fuehrt einen Smoke-T
 - die Windows-API-Typen werden kompiliert
 - wichtige Einstiegspunkte wie Hotkey-Registrierung, Anzeige, Ausgabe-Umschaltung und Mikrofon-Umschaltung werden statisch geprueft
 - danach wird ein portables ZIP-Artefakt gebaut
+- das ZIP enthaelt `VERSION.txt`
 
 Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiogeraet auf dem Runner.
 
@@ -211,6 +223,7 @@ Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiog
 | `Uninstall-Autostart.ps1` | Entfernt die Windows-Autostart-Verknuepfung |
 | `README.md` | Deutsche Dokumentation mit Quickguide |
 | `README.en.md` | Englische Dokumentation |
+| `VERSION.txt` | Versionshinweis fuer das portable ZIP |
 | `Tests/Test-AudioSwitcher.ps1` | Smoke-Test fuer CI |
 | `.github/workflows/test.yml` | Testet das Tool und baut ein portables ZIP |
 | `.github/workflows/release.yml` | Baut und veroeffentlicht ein Release-ZIP |
