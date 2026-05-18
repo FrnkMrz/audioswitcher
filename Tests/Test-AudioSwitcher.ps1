@@ -47,21 +47,89 @@ function Assert-Throws {
     }
 }
 
-Assert-True (Test-Path $scriptPath) "AudioSwitcher.ps1 was not found."
-Assert-True (Test-Path $nativeTypePath) "AudioSwitcher.Native.cs was not found."
-Assert-True (Test-Path $configPath) "config.json was not found."
-Assert-True (Test-Path $readmePath) "README.md was not found."
-Assert-True (Test-Path $englishReadmePath) "README.en.md was not found."
-Assert-True (Test-Path $versionPath) "VERSION.txt was not found."
-Assert-True (Test-Path $iconPath) "Assets/AudioSwitcher.ico was not found."
-Assert-True (Test-Path $gitignorePath) ".gitignore was not found."
-Assert-True (Test-Path $launcherPath) "Start-AudioSwitcher.bat was not found."
-Assert-True (Test-Path $portableInstallPath) "Install-Portable.ps1 was not found."
-Assert-True (Test-Path $portableUninstallPath) "Uninstall-Portable.ps1 was not found."
-Assert-True (Test-Path $installAutostartPath) "Install-Autostart.ps1 was not found."
-Assert-True (Test-Path $uninstallAutostartPath) "Uninstall-Autostart.ps1 was not found."
-Assert-True (Test-Path $testWorkflowPath) "Test workflow was not found."
-Assert-True (Test-Path $releaseWorkflowPath) "Release workflow was not found."
+function Assert-PathExists {
+    param(
+        [string]$Path,
+        [string]$Message
+    )
+
+    Assert-True (Test-Path -LiteralPath $Path) $Message
+}
+
+function Assert-Match {
+    param(
+        [string]$Content,
+        [string]$Pattern,
+        [string]$Message
+    )
+
+    Assert-True ([System.Text.RegularExpressions.Regex]::IsMatch($Content, $Pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) $Message
+}
+
+function Assert-ScriptParses {
+    param(
+        [string]$Content,
+        [string]$Label
+    )
+
+    $localParseErrors = $null
+    [System.Management.Automation.Language.Parser]::ParseInput($Content, [ref]$null, [ref]$localParseErrors) | Out-Null
+    Assert-True ($localParseErrors.Count -eq 0) ("$Label parser found errors: " + ($localParseErrors | ForEach-Object { $_.Message } | Out-String))
+}
+
+function Invoke-PortableInstallationLifecycleTests {
+    $tempRoot = Join-Path $env:TEMP ("AudioSwitcher-Smoke-" + [guid]::NewGuid().ToString("N"))
+
+    try {
+        & $portableInstallPath -DestinationPath $tempRoot
+
+        Assert-PathExists (Join-Path $tempRoot "AudioSwitcher.ps1") "Portable install did not copy AudioSwitcher.ps1."
+        Assert-PathExists (Join-Path $tempRoot ".audioswitcher-install.json") "Portable install did not write the install manifest."
+
+        Set-Content -LiteralPath (Join-Path $tempRoot "config.json") -Value '{"OutputHotkey":"Ctrl+Alt+F8"}' -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $tempRoot ".audioswitcher-install.json") -Value (@{ ManagedPaths = @("obsolete.txt") } | ConvertTo-Json) -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $tempRoot "obsolete.txt") -Value "old file" -Encoding UTF8
+
+        & $portableInstallPath -DestinationPath $tempRoot
+
+        $preservedConfig = Get-Content -LiteralPath (Join-Path $tempRoot "config.json") -Raw | ConvertFrom-Json
+        Assert-True ($preservedConfig.OutputHotkey -eq "Ctrl+Alt+F8") "Portable install should preserve an existing config.json by default."
+        Assert-True (-not (Test-Path -LiteralPath (Join-Path $tempRoot "obsolete.txt"))) "Portable install should remove obsolete managed files from a previous manifest."
+
+        & $portableInstallPath -DestinationPath $tempRoot -ReplaceConfig
+
+        $replacedConfig = Get-Content -LiteralPath (Join-Path $tempRoot "config.json") -Raw | ConvertFrom-Json
+        Assert-True ($replacedConfig.OutputHotkey -eq "Ctrl+Alt+A") "Portable install with -ReplaceConfig should restore the default config.json."
+
+        & $portableUninstallPath -DestinationPath $tempRoot
+        Assert-True (-not (Test-Path -LiteralPath $tempRoot)) "Portable uninstall should remove the installation directory."
+
+        $driveRoot = [System.IO.Path]::GetPathRoot($tempRoot)
+        Assert-Throws { & $portableInstallPath -DestinationPath $driveRoot } "Portable install should reject a drive root as DestinationPath."
+        Assert-Throws { & $portableUninstallPath -DestinationPath $driveRoot } "Portable uninstall should reject a drive root as DestinationPath."
+    }
+    finally {
+        if (Test-Path -LiteralPath $tempRoot) {
+            Remove-Item -LiteralPath $tempRoot -Recurse -Force
+        }
+    }
+}
+
+Assert-PathExists $scriptPath "AudioSwitcher.ps1 was not found."
+Assert-PathExists $nativeTypePath "AudioSwitcher.Native.cs was not found."
+Assert-PathExists $configPath "config.json was not found."
+Assert-PathExists $readmePath "README.md was not found."
+Assert-PathExists $englishReadmePath "README.en.md was not found."
+Assert-PathExists $versionPath "VERSION.txt was not found."
+Assert-PathExists $iconPath "Assets/AudioSwitcher.ico was not found."
+Assert-PathExists $gitignorePath ".gitignore was not found."
+Assert-PathExists $launcherPath "Start-AudioSwitcher.bat was not found."
+Assert-PathExists $portableInstallPath "Install-Portable.ps1 was not found."
+Assert-PathExists $portableUninstallPath "Uninstall-Portable.ps1 was not found."
+Assert-PathExists $installAutostartPath "Install-Autostart.ps1 was not found."
+Assert-PathExists $uninstallAutostartPath "Uninstall-Autostart.ps1 was not found."
+Assert-PathExists $testWorkflowPath "Test workflow was not found."
+Assert-PathExists $releaseWorkflowPath "Release workflow was not found."
 
 $scriptContent = Get-Content -LiteralPath $scriptPath -Raw
 $nativeTypeContent = Get-Content -LiteralPath $nativeTypePath -Raw
@@ -76,68 +144,66 @@ $installAutostartContent = Get-Content -LiteralPath $installAutostartPath -Raw
 $uninstallAutostartContent = Get-Content -LiteralPath $uninstallAutostartPath -Raw
 $testWorkflowContent = Get-Content -LiteralPath $testWorkflowPath -Raw
 $releaseWorkflowContent = Get-Content -LiteralPath $releaseWorkflowPath -Raw
-$parseErrors = $null
-[System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$parseErrors) | Out-Null
 
-Assert-True ($parseErrors.Count -eq 0) ("PowerShell parser found errors: " + ($parseErrors | ForEach-Object { $_.Message } | Out-String))
-Assert-True ($scriptContent -match 'OutputHotkey = "Ctrl\+Alt\+A"') "Default output hotkey is missing or changed."
-Assert-True ($scriptContent -match 'InputHotkey = "Ctrl\+Alt\+M"') "Default input hotkey is missing or changed."
-Assert-True ($scriptContent -match 'Get-AudioSwitcherConfig') "Config loader is missing."
-Assert-True ($scriptContent -match 'ExcludedOutputDeviceNamePatterns') "Output exclusion patterns are not wired into the script."
-Assert-True ($scriptContent -match 'ExcludedInputDeviceNamePatterns') "Input exclusion patterns are not wired into the script."
-Assert-True ($scriptContent -match 'ExcludedDeviceNamePatterns') "Legacy excluded device patterns should remain supported."
-Assert-True ($scriptContent -match 'AudioSwitcher\.Native\.cs') "Native C# type file is not loaded."
-Assert-True ($scriptContent -match 'Show-SwitchNotification') "On-screen switch notification is missing."
-Assert-True ($scriptContent -match 'New-AudioSwitcherTrayIcon') "Custom tray icon builder is missing."
-Assert-True ($scriptContent -match 'Get-AudioSwitcherIconPath') "Tray icon path resolver is missing."
-Assert-True ($scriptContent -match 'DestroyIcon') "Tray icon handle cleanup is missing."
-Assert-True ($scriptContent -match 'Assert-AudioSwitcherConfig') "Config validation is missing."
-Assert-True ($scriptContent -match 'Write-AudioSwitcherDeviceList') "Device listing command is missing."
-Assert-True ($scriptContent -match 'ListDevices') "ListDevices parameter is missing."
-Assert-True ($scriptContent -match 'Ausgabe wechseln') "Tray output switch action is missing."
-Assert-True ($scriptContent -match 'Mikrofon wechseln') "Tray input switch action is missing."
-Assert-True ($scriptContent -match 'tray\.Icon = \$trayIcon') "Tray should prefer the custom icon when it is available."
-Assert-True ($scriptContent -match '\$menuHotkeys = \[System\.Windows\.Forms\.ToolStripMenuItem\]::new\("\$OutputHotkey  \|  \$InputHotkey"\)') "Tray menu should show the active hotkeys."
-Assert-True ($scriptContent -match 'Aktuelles Mikrofon') "Input switch notification title is missing."
-Assert-True ($scriptContent -match 'FormBorderStyle\]::None') "Notification should be borderless."
-Assert-True ($scriptContent -match '\.TopMost\s*=\s*\$true') "Notification should be topmost."
-Assert-True ($scriptContent -match 'System\.Windows\.Forms\.Timer') "Notification auto-dismiss timer is missing."
-Assert-True ($scriptContent -match '\.AutoEllipsis\s*=\s*\$true') "Notification should handle long device names."
-Assert-True ($scriptContent -match 'notificationForm\.Dispose') "Notification form cleanup is missing."
-Assert-True ($scriptContent -match 'NotificationPosition') "Notification position setting is missing."
-Assert-True ($scriptContent -match 'SetHighDpiMode') "DPI awareness setup is missing."
-Assert-True ($scriptContent -match 'PerMonitorV2') "DPI awareness should prefer per-monitor scaling."
-Assert-True ($scriptContent -match 'MethodInvocationException') "Blocked hotkey errors should be handled explicitly."
-Assert-True ($scriptContent -match 'InvalidOperationException') "Direct blocked hotkey errors should be handled explicitly."
-Assert-True ($scriptContent -match 'Der \$Label-Hotkey \$HotkeyText ist bereits belegt') "Blocked hotkey message should identify the affected hotkey."
-Assert-True ($scriptContent -match 'OutputHotkey und InputHotkey duerfen nicht identisch sein') "Duplicate output/input hotkeys should be rejected."
-Assert-True ($scriptContent -match 'AudioDeviceKind\]::Output') "Output hotkey window is missing."
-Assert-True ($scriptContent -match 'AudioDeviceKind\]::Input') "Input hotkey window is missing."
-Assert-True ($scriptContent -match 'MOD_CONTROL') "Hotkey modifier constants should be documented."
-Assert-True ($scriptContent -match 'PerMonitorV2\) is enabled') "Fixed notification size should mention DPI scaling."
-Assert-True ($nativeTypeContent -match 'RegisterHotKey') "Hotkey registration entry point is missing."
-Assert-True ($nativeTypeContent -match 'MOD_NOREPEAT') "Hotkey repeat suppression is missing."
-Assert-True ($nativeTypeContent -match 'AudioDeviceKind') "Hotkey window should know whether it controls output or input."
-Assert-True ($nativeTypeContent -match 'SwitchOutputToNext') "Output switching entry point is missing."
-Assert-True ($nativeTypeContent -match 'SwitchInputToNext') "Input switching entry point is missing."
-Assert-True ($nativeTypeContent -match 'ListOutputDevices') "Output device listing entry point is missing."
-Assert-True ($nativeTypeContent -match 'ListInputDevices') "Input device listing entry point is missing."
-Assert-True ($nativeTypeContent -match '0bd7a1be-7a1a-44db-8397-cc5392387b5e') "IMMDeviceCollection IID is incorrect."
-Assert-True ($nativeTypeContent -match 'EDataFlow\.eRender') "Output switching should enumerate render devices."
-Assert-True ($nativeTypeContent -match 'EDataFlow\.eCapture') "Input switching should enumerate capture devices."
-Assert-True ($nativeTypeContent -match 'IsExcluded') "Device exclusion filtering is missing."
-Assert-True ($nativeTypeContent -match 'Regex\.Escape') "Device exclusion patterns should be wildcard-safe."
-Assert-True ($nativeTypeContent -match 'SetDefaultEndpoint') "Audio endpoint switching entry point is missing."
-Assert-True ($nativeTypeContent -match 'DEVICE_STATE_ACTIVE') "Active-device filtering is missing."
-Assert-True ($nativeTypeContent -match 'FinalReleaseComObject') "COM object cleanup is missing."
-Assert-True ($nativeTypeContent -match 'SetDefaultEndpoint\(next\.Id, ERole\.eConsole\)') "Console role is not updated."
-Assert-True ($nativeTypeContent -match 'SetDefaultEndpoint\(next\.Id, ERole\.eMultimedia\)') "Multimedia role is not updated."
-Assert-True ($nativeTypeContent -match 'SetDefaultEndpoint\(next\.Id, ERole\.eCommunications\)') "Communications role is not updated."
-Assert-True ($nativeTypeContent -match 'catch \(InvalidComObjectException\)') "COM cleanup should tolerate already-released RCWs."
-Assert-True ($nativeTypeContent -match 'undocumented Windows COM interface') "Undocumented IPolicyConfig risk should be documented."
-Assert-True ($nativeTypeContent -match 'CoreAudio objects are native COM references') "Explicit COM release should be explained."
-Assert-True ($nativeTypeContent -match 'MMDeviceEnumerator is the documented CoreAudio COM object') "CoreAudio enumerator should be explained."
-Assert-True ($nativeTypeContent -match 'method order matters for COM interop') "IPolicyConfig method order risk should be documented."
+Assert-ScriptParses -Content $scriptContent -Label "AudioSwitcher.ps1"
+Assert-Match -Content $scriptContent -Pattern 'OutputHotkey = "Ctrl\+Alt\+A"' -Message "Default output hotkey is missing or changed."
+Assert-Match -Content $scriptContent -Pattern 'InputHotkey = "Ctrl\+Alt\+M"' -Message "Default input hotkey is missing or changed."
+Assert-Match -Content $scriptContent -Pattern 'Get-AudioSwitcherConfig' -Message "Config loader is missing."
+Assert-Match -Content $scriptContent -Pattern 'ExcludedOutputDeviceNamePatterns' -Message "Output exclusion patterns are not wired into the script."
+Assert-Match -Content $scriptContent -Pattern 'ExcludedInputDeviceNamePatterns' -Message "Input exclusion patterns are not wired into the script."
+Assert-Match -Content $scriptContent -Pattern 'ExcludedDeviceNamePatterns' -Message "Legacy excluded device patterns should remain supported."
+Assert-Match -Content $scriptContent -Pattern 'AudioSwitcher\.Native\.cs' -Message "Native C# type file is not loaded."
+Assert-Match -Content $scriptContent -Pattern 'Show-SwitchNotification' -Message "On-screen switch notification is missing."
+Assert-Match -Content $scriptContent -Pattern 'New-AudioSwitcherTrayIcon' -Message "Custom tray icon builder is missing."
+Assert-Match -Content $scriptContent -Pattern 'Get-AudioSwitcherIconPath' -Message "Tray icon path resolver is missing."
+Assert-Match -Content $scriptContent -Pattern 'DestroyIcon' -Message "Tray icon handle cleanup is missing."
+Assert-Match -Content $scriptContent -Pattern 'Assert-AudioSwitcherConfig' -Message "Config validation is missing."
+Assert-Match -Content $scriptContent -Pattern 'Write-AudioSwitcherDeviceList' -Message "Device listing command is missing."
+Assert-Match -Content $scriptContent -Pattern 'ListDevices' -Message "ListDevices parameter is missing."
+Assert-Match -Content $scriptContent -Pattern 'Ausgabe wechseln' -Message "Tray output switch action is missing."
+Assert-Match -Content $scriptContent -Pattern 'Mikrofon wechseln' -Message "Tray input switch action is missing."
+Assert-Match -Content $scriptContent -Pattern 'tray\.Icon = \$trayIcon' -Message "Tray should prefer the custom icon when it is available."
+Assert-Match -Content $scriptContent -Pattern '\$menuHotkeys = \[System\.Windows\.Forms\.ToolStripMenuItem\]::new\("\$OutputHotkey  \|  \$InputHotkey"\)' -Message "Tray menu should show the active hotkeys."
+Assert-Match -Content $scriptContent -Pattern 'Aktuelles Mikrofon' -Message "Input switch notification title is missing."
+Assert-Match -Content $scriptContent -Pattern 'FormBorderStyle\]::None' -Message "Notification should be borderless."
+Assert-Match -Content $scriptContent -Pattern '\.TopMost\s*=\s*\$true' -Message "Notification should be topmost."
+Assert-Match -Content $scriptContent -Pattern 'System\.Windows\.Forms\.Timer' -Message "Notification auto-dismiss timer is missing."
+Assert-Match -Content $scriptContent -Pattern '\.AutoEllipsis\s*=\s*\$true' -Message "Notification should handle long device names."
+Assert-Match -Content $scriptContent -Pattern 'notificationForm\.Dispose' -Message "Notification form cleanup is missing."
+Assert-Match -Content $scriptContent -Pattern 'NotificationPosition' -Message "Notification position setting is missing."
+Assert-Match -Content $scriptContent -Pattern 'SetHighDpiMode' -Message "DPI awareness setup is missing."
+Assert-Match -Content $scriptContent -Pattern 'PerMonitorV2' -Message "DPI awareness should prefer per-monitor scaling."
+Assert-Match -Content $scriptContent -Pattern 'MethodInvocationException' -Message "Blocked hotkey errors should be handled explicitly."
+Assert-Match -Content $scriptContent -Pattern 'InvalidOperationException' -Message "Direct blocked hotkey errors should be handled explicitly."
+Assert-Match -Content $scriptContent -Pattern 'Der \$Label-Hotkey \$HotkeyText ist bereits belegt' -Message "Blocked hotkey message should identify the affected hotkey."
+Assert-Match -Content $scriptContent -Pattern 'OutputHotkey und InputHotkey duerfen nicht identisch sein' -Message "Duplicate output/input hotkeys should be rejected."
+Assert-Match -Content $scriptContent -Pattern 'AudioDeviceKind\]::Output' -Message "Output hotkey window is missing."
+Assert-Match -Content $scriptContent -Pattern 'AudioDeviceKind\]::Input' -Message "Input hotkey window is missing."
+Assert-Match -Content $scriptContent -Pattern 'MOD_CONTROL' -Message "Hotkey modifier constants should be documented."
+Assert-Match -Content $scriptContent -Pattern 'PerMonitorV2\) is enabled' -Message "Fixed notification size should mention DPI scaling."
+Assert-Match -Content $nativeTypeContent -Pattern 'RegisterHotKey' -Message "Hotkey registration entry point is missing."
+Assert-Match -Content $nativeTypeContent -Pattern 'MOD_NOREPEAT' -Message "Hotkey repeat suppression is missing."
+Assert-Match -Content $nativeTypeContent -Pattern 'AudioDeviceKind' -Message "Hotkey window should know whether it controls output or input."
+Assert-Match -Content $nativeTypeContent -Pattern 'SwitchOutputToNext' -Message "Output switching entry point is missing."
+Assert-Match -Content $nativeTypeContent -Pattern 'SwitchInputToNext' -Message "Input switching entry point is missing."
+Assert-Match -Content $nativeTypeContent -Pattern 'ListOutputDevices' -Message "Output device listing entry point is missing."
+Assert-Match -Content $nativeTypeContent -Pattern 'ListInputDevices' -Message "Input device listing entry point is missing."
+Assert-Match -Content $nativeTypeContent -Pattern '0bd7a1be-7a1a-44db-8397-cc5392387b5e' -Message "IMMDeviceCollection IID is incorrect."
+Assert-Match -Content $nativeTypeContent -Pattern 'EDataFlow\.eRender' -Message "Output switching should enumerate render devices."
+Assert-Match -Content $nativeTypeContent -Pattern 'EDataFlow\.eCapture' -Message "Input switching should enumerate capture devices."
+Assert-Match -Content $nativeTypeContent -Pattern 'IsExcluded' -Message "Device exclusion filtering is missing."
+Assert-Match -Content $nativeTypeContent -Pattern 'Regex\.Escape' -Message "Device exclusion patterns should be wildcard-safe."
+Assert-Match -Content $nativeTypeContent -Pattern 'SetDefaultEndpoint' -Message "Audio endpoint switching entry point is missing."
+Assert-Match -Content $nativeTypeContent -Pattern 'DEVICE_STATE_ACTIVE' -Message "Active-device filtering is missing."
+Assert-Match -Content $nativeTypeContent -Pattern 'FinalReleaseComObject' -Message "COM object cleanup is missing."
+Assert-Match -Content $nativeTypeContent -Pattern 'SetDefaultEndpoint\(next\.Id, ERole\.eConsole\)' -Message "Console role is not updated."
+Assert-Match -Content $nativeTypeContent -Pattern 'SetDefaultEndpoint\(next\.Id, ERole\.eMultimedia\)' -Message "Multimedia role is not updated."
+Assert-Match -Content $nativeTypeContent -Pattern 'SetDefaultEndpoint\(next\.Id, ERole\.eCommunications\)' -Message "Communications role is not updated."
+Assert-Match -Content $nativeTypeContent -Pattern 'catch \(InvalidComObjectException\)' -Message "COM cleanup should tolerate already-released RCWs."
+Assert-Match -Content $nativeTypeContent -Pattern 'undocumented Windows COM interface' -Message "Undocumented IPolicyConfig risk should be documented."
+Assert-Match -Content $nativeTypeContent -Pattern 'CoreAudio objects are native COM references' -Message "Explicit COM release should be explained."
+Assert-Match -Content $nativeTypeContent -Pattern 'MMDeviceEnumerator is the documented CoreAudio COM object' -Message "CoreAudio enumerator should be explained."
+Assert-Match -Content $nativeTypeContent -Pattern 'method order matters for COM interop' -Message "IPolicyConfig method order risk should be documented."
 
 $config = $configContent | ConvertFrom-Json
 Assert-True ($config.OutputHotkey -eq "Ctrl+Alt+A") "config.json default output hotkey is incorrect."
@@ -147,66 +213,66 @@ Assert-True ($config.NotificationDurationMs -ge 500) "config.json notification d
 Assert-True ($config.NotificationPosition -eq "BottomRight") "config.json notification position is incorrect."
 Assert-True (($config.PSObject.Properties.Name -contains "ExcludedOutputDeviceNamePatterns")) "config.json output excluded device list is missing."
 Assert-True (($config.PSObject.Properties.Name -contains "ExcludedInputDeviceNamePatterns")) "config.json input excluded device list is missing."
-Assert-True ($versionContent -match '^AudioSwitcher\s+\d+\.\d+\.\d+') "VERSION.txt should contain a semantic AudioSwitcher version."
+Assert-Match -Content $versionContent -Pattern '^AudioSwitcher\s+\d+\.\d+\.\d+' -Message "VERSION.txt should contain a semantic AudioSwitcher version."
 
-Assert-True ($installAutostartContent -match 'WScript\.Shell') "Autostart installer should create a Windows shortcut."
-Assert-True ($installAutostartContent -match 'Startup') "Autostart installer should target the Startup folder."
-Assert-True ($installAutostartContent -match 'Start-AudioSwitcher\.bat') "Autostart installer should launch the batch file."
-Assert-True ($installAutostartContent -match 'IconLocation') "Autostart installer should assign the project icon to the shortcut."
-Assert-True ($portableInstallContent -match 'LOCALAPPDATA') "Portable installer should default to LocalAppData."
-Assert-True ($portableInstallContent -match 'Install-Autostart\.ps1') "Portable installer should be able to install autostart in the target directory."
-Assert-True ($portableInstallContent -match 'ReplaceConfig') "Portable installer should support preserving an existing config."
-Assert-True ($portableInstallContent -match 'Assets') "Portable installer should copy the Assets folder."
-Assert-True ($portableInstallContent -match 'ManagedPaths') "Portable installer should track managed install paths."
-Assert-True ($portableInstallContent -match 'Read-InstallState') "Portable installer should read an existing install state for updates."
-Assert-True ($portableInstallContent -match 'Write-InstallState') "Portable installer should write an install state manifest."
-Assert-True ($portableUninstallContent -match 'LOCALAPPDATA') "Portable uninstaller should default to LocalAppData."
-Assert-True ($portableUninstallContent -match 'CreateShortcut') "Portable uninstaller should inspect the startup shortcut before deleting it."
-Assert-True ($portableUninstallContent -match 'TargetPath') "Portable uninstaller should only remove autostart for the matching installation."
-Assert-True ($portableUninstallContent -match '\.audioswitcher-install\.json') "Portable uninstaller should recognize the install manifest."
-Assert-True ($uninstallAutostartContent -match 'Remove-Item') "Autostart uninstaller should remove the shortcut."
-Assert-True ($readmeContent -match 'Deutscher Quickguide') "German quick guide is missing."
-Assert-True ($readmeContent -match 'README\.en\.md') "German README should link the English documentation."
-Assert-True ($readmeContent -match 'Release-ZIP') "German README should document release ZIPs."
-Assert-True ($readmeContent -match 'Ctrl\+Alt\+M') "German README should document the input hotkey."
-Assert-True ($readmeContent -match 'Mikrofon') "German README should document microphone switching."
-Assert-True ($readmeContent -match '-ListDevices') "German README should document device listing."
-Assert-True ($readmeContent -match 'Ausgabe wechseln') "German README should document tray switch actions."
-Assert-True ($readmeContent -match 'LocalAppData') "German README should recommend a stable install location."
-Assert-True ($readmeContent -match 'AudioSwitcher\.ico') "German README should document the fixed icon asset."
-Assert-True ($readmeContent -match 'Install-Portable\.ps1') "German README should document the portable installer."
-Assert-True ($readmeContent -match 'Uninstall-Portable\.ps1') "German README should document the portable uninstaller."
-Assert-True ($readmeContent -match 'aktualisiert') "German README should document update behavior."
-Assert-True ($readmeContent -match 'VERSION\.txt') "German README should document the version file."
-Assert-True ($readmeContent -match 'Actions[\s\S]+Artifacts[\s\S]+AudioSwitcher') "German README should explain where to find the Actions ZIP artifact."
-Assert-True ($englishReadmeContent -match 'Audio Switcher for Windows 11') "English README title is missing."
-Assert-True ($englishReadmeContent -match 'Quick Start') "English quick start is missing."
-Assert-True ($englishReadmeContent -match 'GitHub Actions test pipeline builds a portable') "English README should document CI ZIP artifacts."
-Assert-True ($englishReadmeContent -match 'Ctrl\+Alt\+M') "English README should document the input hotkey."
-Assert-True ($englishReadmeContent -match 'microphone') "English README should document microphone switching."
-Assert-True ($englishReadmeContent -match '-ListDevices') "English README should document device listing."
-Assert-True ($englishReadmeContent -match 'LocalAppData') "English README should recommend a stable install location."
-Assert-True ($englishReadmeContent -match 'AudioSwitcher\.ico') "English README should document the fixed icon asset."
-Assert-True ($englishReadmeContent -match 'Install-Portable\.ps1') "English README should document the portable installer."
-Assert-True ($englishReadmeContent -match 'Uninstall-Portable\.ps1') "English README should document the portable uninstaller."
-Assert-True ($englishReadmeContent -match 'updated') "English README should document update behavior."
-Assert-True ($englishReadmeContent -match 'VERSION\.txt') "English README should document the version file."
-Assert-True ($englishReadmeContent -match 'not stored directly in the repository') "English README should explain that ZIP artifacts are not committed."
-Assert-True ($englishReadmeContent -match 'README\.md') "English README should link the German documentation."
-Assert-True ($gitignoreContent -match 'AudioSwitcher\.zip') ".gitignore should ignore the generated ZIP."
-Assert-True ($gitignoreContent -match '\*\.log') ".gitignore should ignore local logs."
-Assert-True ($gitignoreContent -match '\.DS_Store') ".gitignore should ignore macOS metadata."
-Assert-True ($gitignoreContent -match '\*\.icloud') ".gitignore should ignore iCloud placeholder files."
-Assert-True ($testWorkflowContent -match 'VERSION\.txt') "Test ZIP should include VERSION.txt."
-Assert-True ($testWorkflowContent -match 'Assets') "Test ZIP should include the Assets folder."
-Assert-True ($testWorkflowContent -match 'Uninstall-Portable\.ps1') "Test ZIP should include the portable uninstaller."
-Assert-True ($releaseWorkflowContent -match 'Compress-Archive') "Release workflow should build a ZIP file."
-Assert-True ($releaseWorkflowContent -match 'Assets') "Release ZIP should include the Assets folder."
-Assert-True ($releaseWorkflowContent -match 'Uninstall-Portable\.ps1') "Release ZIP should include the portable uninstaller."
-Assert-True ($releaseWorkflowContent -match 'README\.en\.md') "Release ZIP should include English documentation."
-Assert-True ($releaseWorkflowContent -match 'VERSION\.txt') "Release ZIP should include VERSION.txt."
-Assert-True ($releaseWorkflowContent -match 'actions/upload-artifact@v4') "Release workflow should upload the ZIP artifact."
-Assert-True ($releaseWorkflowContent -match 'softprops/action-gh-release@v2') "Release workflow should publish tagged releases."
+Assert-Match -Content $installAutostartContent -Pattern 'WScript\.Shell' -Message "Autostart installer should create a Windows shortcut."
+Assert-Match -Content $installAutostartContent -Pattern 'Startup' -Message "Autostart installer should target the Startup folder."
+Assert-Match -Content $installAutostartContent -Pattern 'Start-AudioSwitcher\.bat' -Message "Autostart installer should launch the batch file."
+Assert-Match -Content $installAutostartContent -Pattern 'IconLocation' -Message "Autostart installer should assign the project icon to the shortcut."
+Assert-Match -Content $portableInstallContent -Pattern 'LOCALAPPDATA' -Message "Portable installer should default to LocalAppData."
+Assert-Match -Content $portableInstallContent -Pattern 'Install-Autostart\.ps1' -Message "Portable installer should be able to install autostart in the target directory."
+Assert-Match -Content $portableInstallContent -Pattern 'ReplaceConfig' -Message "Portable installer should support preserving an existing config."
+Assert-Match -Content $portableInstallContent -Pattern 'Assets' -Message "Portable installer should copy the Assets folder."
+Assert-Match -Content $portableInstallContent -Pattern 'ManagedPaths' -Message "Portable installer should track managed install paths."
+Assert-Match -Content $portableInstallContent -Pattern 'Read-InstallState' -Message "Portable installer should read an existing install state for updates."
+Assert-Match -Content $portableInstallContent -Pattern 'Write-InstallState' -Message "Portable installer should write an install state manifest."
+Assert-Match -Content $portableUninstallContent -Pattern 'LOCALAPPDATA' -Message "Portable uninstaller should default to LocalAppData."
+Assert-Match -Content $portableUninstallContent -Pattern 'CreateShortcut' -Message "Portable uninstaller should inspect the startup shortcut before deleting it."
+Assert-Match -Content $portableUninstallContent -Pattern 'TargetPath' -Message "Portable uninstaller should only remove autostart for the matching installation."
+Assert-Match -Content $portableUninstallContent -Pattern '\.audioswitcher-install\.json' -Message "Portable uninstaller should recognize the install manifest."
+Assert-Match -Content $uninstallAutostartContent -Pattern 'Remove-Item' -Message "Autostart uninstaller should remove the shortcut."
+Assert-Match -Content $readmeContent -Pattern 'Deutscher Quickguide' -Message "German quick guide is missing."
+Assert-Match -Content $readmeContent -Pattern 'README\.en\.md' -Message "German README should link the English documentation."
+Assert-Match -Content $readmeContent -Pattern 'Release-ZIP' -Message "German README should document release ZIPs."
+Assert-Match -Content $readmeContent -Pattern 'Ctrl\+Alt\+M' -Message "German README should document the input hotkey."
+Assert-Match -Content $readmeContent -Pattern 'Mikrofon' -Message "German README should document microphone switching."
+Assert-Match -Content $readmeContent -Pattern '-ListDevices' -Message "German README should document device listing."
+Assert-Match -Content $readmeContent -Pattern 'Ausgabe wechseln' -Message "German README should document tray switch actions."
+Assert-Match -Content $readmeContent -Pattern 'LocalAppData' -Message "German README should recommend a stable install location."
+Assert-Match -Content $readmeContent -Pattern 'AudioSwitcher\.ico' -Message "German README should document the fixed icon asset."
+Assert-Match -Content $readmeContent -Pattern 'Install-Portable\.ps1' -Message "German README should document the portable installer."
+Assert-Match -Content $readmeContent -Pattern 'Uninstall-Portable\.ps1' -Message "German README should document the portable uninstaller."
+Assert-Match -Content $readmeContent -Pattern 'aktualisiert' -Message "German README should document update behavior."
+Assert-Match -Content $readmeContent -Pattern 'VERSION\.txt' -Message "German README should document the version file."
+Assert-Match -Content $readmeContent -Pattern 'Actions[\s\S]+Artifacts[\s\S]+AudioSwitcher' -Message "German README should explain where to find the Actions ZIP artifact."
+Assert-Match -Content $englishReadmeContent -Pattern 'Audio Switcher for Windows 11' -Message "English README title is missing."
+Assert-Match -Content $englishReadmeContent -Pattern 'Quick Start' -Message "English quick start is missing."
+Assert-Match -Content $englishReadmeContent -Pattern 'GitHub Actions test pipeline builds a portable' -Message "English README should document CI ZIP artifacts."
+Assert-Match -Content $englishReadmeContent -Pattern 'Ctrl\+Alt\+M' -Message "English README should document the input hotkey."
+Assert-Match -Content $englishReadmeContent -Pattern 'microphone' -Message "English README should document microphone switching."
+Assert-Match -Content $englishReadmeContent -Pattern '-ListDevices' -Message "English README should document device listing."
+Assert-Match -Content $englishReadmeContent -Pattern 'LocalAppData' -Message "English README should recommend a stable install location."
+Assert-Match -Content $englishReadmeContent -Pattern 'AudioSwitcher\.ico' -Message "English README should document the fixed icon asset."
+Assert-Match -Content $englishReadmeContent -Pattern 'Install-Portable\.ps1' -Message "English README should document the portable installer."
+Assert-Match -Content $englishReadmeContent -Pattern 'Uninstall-Portable\.ps1' -Message "English README should document the portable uninstaller."
+Assert-Match -Content $englishReadmeContent -Pattern 'keeps the installation updated cleanly' -Message "English README should document update behavior."
+Assert-Match -Content $englishReadmeContent -Pattern 'VERSION\.txt' -Message "English README should document the version file."
+Assert-Match -Content $englishReadmeContent -Pattern 'not stored directly in the repository' -Message "English README should explain that ZIP artifacts are not committed."
+Assert-Match -Content $englishReadmeContent -Pattern 'README\.md' -Message "English README should link the German documentation."
+Assert-Match -Content $gitignoreContent -Pattern 'AudioSwitcher\.zip' -Message ".gitignore should ignore the generated ZIP."
+Assert-Match -Content $gitignoreContent -Pattern '\*\.log' -Message ".gitignore should ignore local logs."
+Assert-Match -Content $gitignoreContent -Pattern '\.DS_Store' -Message ".gitignore should ignore macOS metadata."
+Assert-Match -Content $gitignoreContent -Pattern '\*\.icloud' -Message ".gitignore should ignore iCloud placeholder files."
+Assert-Match -Content $testWorkflowContent -Pattern 'VERSION\.txt' -Message "Test ZIP should include VERSION.txt."
+Assert-Match -Content $testWorkflowContent -Pattern 'Assets' -Message "Test ZIP should include the Assets folder."
+Assert-Match -Content $testWorkflowContent -Pattern 'Uninstall-Portable\.ps1' -Message "Test ZIP should include the portable uninstaller."
+Assert-Match -Content $releaseWorkflowContent -Pattern 'Compress-Archive' -Message "Release workflow should build a ZIP file."
+Assert-Match -Content $releaseWorkflowContent -Pattern 'Assets' -Message "Release ZIP should include the Assets folder."
+Assert-Match -Content $releaseWorkflowContent -Pattern 'Uninstall-Portable\.ps1' -Message "Release ZIP should include the portable uninstaller."
+Assert-Match -Content $releaseWorkflowContent -Pattern 'README\.en\.md' -Message "Release ZIP should include English documentation."
+Assert-Match -Content $releaseWorkflowContent -Pattern 'VERSION\.txt' -Message "Release ZIP should include VERSION.txt."
+Assert-Match -Content $releaseWorkflowContent -Pattern 'actions/upload-artifact@v4' -Message "Release workflow should upload the ZIP artifact."
+Assert-Match -Content $releaseWorkflowContent -Pattern 'softprops/action-gh-release@v2' -Message "Release workflow should publish tagged releases."
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -248,7 +314,8 @@ $inputDevices = [PortableAudioSwitcher.AudioSwitcher]::ListInputDevices()
 Assert-True ($null -ne $outputDevices) "Output device enumeration returned null."
 Assert-True ($null -ne $inputDevices) "Input device enumeration returned null."
 
-$scriptAst = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$parseErrors)
+$scriptParseErrors = $null
+$scriptAst = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$scriptParseErrors)
 $hotkeyFunctionAst = $scriptAst.Find({
     param($node)
     $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
@@ -283,15 +350,12 @@ Assert-Throws { ConvertTo-HotkeyParts -HotkeyText "Ctrl+Alt+DefinitelyNotAKey" }
 & $hotkeyTestScript
 
 $launcherContent = Get-Content -LiteralPath $launcherPath -Raw
-Assert-True ($launcherContent -match 'AudioSwitcher\.ps1') "Launcher does not call AudioSwitcher.ps1."
-Assert-True ($launcherContent -match 'ExecutionPolicy Bypass') "Launcher does not bypass local execution policy for portable start."
+Assert-Match -Content $launcherContent -Pattern 'AudioSwitcher\.ps1' -Message "Launcher does not call AudioSwitcher.ps1."
+Assert-Match -Content $launcherContent -Pattern 'ExecutionPolicy Bypass' -Message "Launcher does not bypass local execution policy for portable start."
 
-$portableInstallContentForParser = Get-Content -LiteralPath $portableInstallPath -Raw
-[System.Management.Automation.Language.Parser]::ParseInput($portableInstallContentForParser, [ref]$null, [ref]$parseErrors) | Out-Null
-Assert-True ($parseErrors.Count -eq 0) ("Install-Portable.ps1 parser found errors: " + ($parseErrors | ForEach-Object { $_.Message } | Out-String))
+Assert-ScriptParses -Content $portableInstallContent -Label "Install-Portable.ps1"
+Assert-ScriptParses -Content $portableUninstallContent -Label "Uninstall-Portable.ps1"
 
-$portableUninstallContentForParser = Get-Content -LiteralPath $portableUninstallPath -Raw
-[System.Management.Automation.Language.Parser]::ParseInput($portableUninstallContentForParser, [ref]$null, [ref]$parseErrors) | Out-Null
-Assert-True ($parseErrors.Count -eq 0) ("Uninstall-Portable.ps1 parser found errors: " + ($parseErrors | ForEach-Object { $_.Message } | Out-String))
+Invoke-PortableInstallationLifecycleTests
 
 Write-Host "Audio Switcher smoke tests passed."
