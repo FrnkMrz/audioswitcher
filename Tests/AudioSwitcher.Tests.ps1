@@ -78,24 +78,6 @@ function Assert-ScriptParses {
     Assert-True ($localParseErrors.Count -eq 0) ("$Label parser found errors: " + ($localParseErrors | ForEach-Object { $_.Message } | Out-String))
 }
 
-function Read-RequiredFileContent {
-    param(
-        [string]$Path,
-        [string]$Label
-    )
-
-    if (-not (Test-Path -LiteralPath $Path)) {
-        throw ("Required file for {0} was not found: {1}" -f $Label, $Path)
-    }
-
-    try {
-        Get-Content -LiteralPath $Path -Raw -ErrorAction Stop
-    }
-    catch {
-        throw ("Failed to read {0} at '{1}': {2}" -f $Label, $Path, $_.Exception.Message)
-    }
-}
-
 function Resolve-WindowsFormsReferences {
     $references = [System.Collections.Generic.List[string]]::new()
     $references.Add("System.Windows.Forms.dll")
@@ -162,19 +144,37 @@ function Invoke-PortableInstallationLifecycleTests {
 
 Describe "AudioSwitcher repository smoke tests" {
     BeforeAll {
-        $script:scriptContent = Read-RequiredFileContent -Path $scriptPath -Label "AudioSwitcher.ps1"
-        $script:nativeTypeContent = Read-RequiredFileContent -Path $nativeTypePath -Label "AudioSwitcher.Native.cs"
-        $script:configContent = Read-RequiredFileContent -Path $configPath -Label "config.json"
-        $script:readmeContent = Read-RequiredFileContent -Path $readmePath -Label "README.md"
-        $script:englishReadmeContent = Read-RequiredFileContent -Path $englishReadmePath -Label "README.en.md"
-        $script:versionContent = Read-RequiredFileContent -Path $versionPath -Label "VERSION.txt"
-        $script:gitignoreContent = Read-RequiredFileContent -Path $gitignorePath -Label ".gitignore"
-        $script:portableInstallContent = Read-RequiredFileContent -Path $portableInstallPath -Label "Install-Portable.ps1"
-        $script:portableUninstallContent = Read-RequiredFileContent -Path $portableUninstallPath -Label "Uninstall-Portable.ps1"
-        $script:installAutostartContent = Read-RequiredFileContent -Path $installAutostartPath -Label "Install-Autostart.ps1"
-        $script:uninstallAutostartContent = Read-RequiredFileContent -Path $uninstallAutostartPath -Label "Uninstall-Autostart.ps1"
-        $script:testWorkflowContent = Read-RequiredFileContent -Path $testWorkflowPath -Label ".github/workflows/test.yml"
-        $script:releaseWorkflowContent = Read-RequiredFileContent -Path $releaseWorkflowPath -Label ".github/workflows/release.yml"
+        $readRequiredFileContent = {
+            param(
+                [string]$Path,
+                [string]$Label
+            )
+
+            if (-not (Test-Path -LiteralPath $Path)) {
+                throw ("Required file for {0} was not found: {1}" -f $Label, $Path)
+            }
+
+            try {
+                Get-Content -LiteralPath $Path -Raw -ErrorAction Stop
+            }
+            catch {
+                throw ("Failed to read {0} at '{1}': {2}" -f $Label, $Path, $_.Exception.Message)
+            }
+        }
+
+        $script:scriptContent = & $readRequiredFileContent -Path $scriptPath -Label "AudioSwitcher.ps1"
+        $script:nativeTypeContent = & $readRequiredFileContent -Path $nativeTypePath -Label "AudioSwitcher.Native.cs"
+        $script:configContent = & $readRequiredFileContent -Path $configPath -Label "config.json"
+        $script:readmeContent = & $readRequiredFileContent -Path $readmePath -Label "README.md"
+        $script:englishReadmeContent = & $readRequiredFileContent -Path $englishReadmePath -Label "README.en.md"
+        $script:versionContent = & $readRequiredFileContent -Path $versionPath -Label "VERSION.txt"
+        $script:gitignoreContent = & $readRequiredFileContent -Path $gitignorePath -Label ".gitignore"
+        $script:portableInstallContent = & $readRequiredFileContent -Path $portableInstallPath -Label "Install-Portable.ps1"
+        $script:portableUninstallContent = & $readRequiredFileContent -Path $portableUninstallPath -Label "Uninstall-Portable.ps1"
+        $script:installAutostartContent = & $readRequiredFileContent -Path $installAutostartPath -Label "Install-Autostart.ps1"
+        $script:uninstallAutostartContent = & $readRequiredFileContent -Path $uninstallAutostartPath -Label "Uninstall-Autostart.ps1"
+        $script:testWorkflowContent = & $readRequiredFileContent -Path $testWorkflowPath -Label ".github/workflows/test.yml"
+        $script:releaseWorkflowContent = & $readRequiredFileContent -Path $releaseWorkflowPath -Label ".github/workflows/release.yml"
     }
 
     It "has all expected project files" {
