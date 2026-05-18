@@ -1,22 +1,5 @@
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$scriptPath = Join-Path $repoRoot "AudioSwitcher.ps1"
-$nativeTypePath = Join-Path $repoRoot "AudioSwitcher.Native.cs"
-$configPath = Join-Path $repoRoot "config.json"
-$readmePath = Join-Path $repoRoot "README.md"
-$englishReadmePath = Join-Path $repoRoot "README.en.md"
-$versionPath = Join-Path $repoRoot "VERSION.txt"
-$iconPath = Join-Path $repoRoot "Assets/AudioSwitcher.ico"
-$gitignorePath = Join-Path $repoRoot ".gitignore"
-$launcherPath = Join-Path $repoRoot "Start-AudioSwitcher.bat"
-$portableInstallPath = Join-Path $repoRoot "Install-Portable.ps1"
-$portableUninstallPath = Join-Path $repoRoot "Uninstall-Portable.ps1"
-$installAutostartPath = Join-Path $repoRoot "Install-Autostart.ps1"
-$uninstallAutostartPath = Join-Path $repoRoot "Uninstall-Autostart.ps1"
-$testWorkflowPath = Join-Path $repoRoot ".github/workflows/test.yml"
-$releaseWorkflowPath = Join-Path $repoRoot ".github/workflows/release.yml"
-
 function Assert-True {
     param(
         [bool]$Condition,
@@ -108,7 +91,7 @@ function Invoke-PortableInstallationLifecycleTests {
     $tempRoot = Join-Path $env:TEMP ("AudioSwitcher-Smoke-" + [guid]::NewGuid().ToString("N"))
 
     try {
-        & $portableInstallPath -DestinationPath $tempRoot
+        & $script:portableInstallPath -DestinationPath $tempRoot
 
         Assert-True (Test-Path -LiteralPath (Join-Path $tempRoot "AudioSwitcher.ps1")) "Portable install did not copy AudioSwitcher.ps1."
         Assert-True (Test-Path -LiteralPath (Join-Path $tempRoot ".audioswitcher-install.json")) "Portable install did not write the install manifest."
@@ -117,23 +100,23 @@ function Invoke-PortableInstallationLifecycleTests {
         Set-Content -LiteralPath (Join-Path $tempRoot ".audioswitcher-install.json") -Value (@{ ManagedPaths = @("obsolete.txt") } | ConvertTo-Json) -Encoding UTF8
         Set-Content -LiteralPath (Join-Path $tempRoot "obsolete.txt") -Value "old file" -Encoding UTF8
 
-        & $portableInstallPath -DestinationPath $tempRoot
+        & $script:portableInstallPath -DestinationPath $tempRoot
 
         $preservedConfig = Get-Content -LiteralPath (Join-Path $tempRoot "config.json") -Raw | ConvertFrom-Json
         Assert-True ($preservedConfig.OutputHotkey -eq "Ctrl+Alt+F8") "Portable install should preserve an existing config.json by default."
         Assert-True (-not (Test-Path -LiteralPath (Join-Path $tempRoot "obsolete.txt"))) "Portable install should remove obsolete managed files from a previous manifest."
 
-        & $portableInstallPath -DestinationPath $tempRoot -ReplaceConfig
+        & $script:portableInstallPath -DestinationPath $tempRoot -ReplaceConfig
 
         $replacedConfig = Get-Content -LiteralPath (Join-Path $tempRoot "config.json") -Raw | ConvertFrom-Json
         Assert-True ($replacedConfig.OutputHotkey -eq "Ctrl+Alt+A") "Portable install with -ReplaceConfig should restore the default config.json."
 
-        & $portableUninstallPath -DestinationPath $tempRoot
+        & $script:portableUninstallPath -DestinationPath $tempRoot
         Assert-True (-not (Test-Path -LiteralPath $tempRoot)) "Portable uninstall should remove the installation directory."
 
         $driveRoot = [System.IO.Path]::GetPathRoot($tempRoot)
-        Assert-Throws { & $portableInstallPath -DestinationPath $driveRoot } "Portable install should reject a drive root as DestinationPath."
-        Assert-Throws { & $portableUninstallPath -DestinationPath $driveRoot } "Portable uninstall should reject a drive root as DestinationPath."
+        Assert-Throws { & $script:portableInstallPath -DestinationPath $driveRoot } "Portable install should reject a drive root as DestinationPath."
+        Assert-Throws { & $script:portableUninstallPath -DestinationPath $driveRoot } "Portable uninstall should reject a drive root as DestinationPath."
     }
     finally {
         if (Test-Path -LiteralPath $tempRoot) {
@@ -144,6 +127,23 @@ function Invoke-PortableInstallationLifecycleTests {
 
 Describe "AudioSwitcher repository smoke tests" {
     BeforeAll {
+        $script:repoRoot               = Split-Path -Parent $PSScriptRoot
+        $script:scriptPath             = Join-Path $script:repoRoot "AudioSwitcher.ps1"
+        $script:nativeTypePath         = Join-Path $script:repoRoot "AudioSwitcher.Native.cs"
+        $script:configPath             = Join-Path $script:repoRoot "config.json"
+        $script:readmePath             = Join-Path $script:repoRoot "README.md"
+        $script:englishReadmePath      = Join-Path $script:repoRoot "README.en.md"
+        $script:versionPath            = Join-Path $script:repoRoot "VERSION.txt"
+        $script:iconPath               = Join-Path $script:repoRoot "Assets/AudioSwitcher.ico"
+        $script:gitignorePath          = Join-Path $script:repoRoot ".gitignore"
+        $script:launcherPath           = Join-Path $script:repoRoot "Start-AudioSwitcher.bat"
+        $script:portableInstallPath    = Join-Path $script:repoRoot "Install-Portable.ps1"
+        $script:portableUninstallPath  = Join-Path $script:repoRoot "Uninstall-Portable.ps1"
+        $script:installAutostartPath   = Join-Path $script:repoRoot "Install-Autostart.ps1"
+        $script:uninstallAutostartPath = Join-Path $script:repoRoot "Uninstall-Autostart.ps1"
+        $script:testWorkflowPath       = Join-Path $script:repoRoot ".github/workflows/test.yml"
+        $script:releaseWorkflowPath    = Join-Path $script:repoRoot ".github/workflows/release.yml"
+
         $readRequiredFileContent = {
             param(
                 [string]$Path,
@@ -162,38 +162,38 @@ Describe "AudioSwitcher repository smoke tests" {
             }
         }
 
-        $script:scriptContent = & $readRequiredFileContent -Path $scriptPath -Label "AudioSwitcher.ps1"
-        $script:nativeTypeContent = & $readRequiredFileContent -Path $nativeTypePath -Label "AudioSwitcher.Native.cs"
-        $script:configContent = & $readRequiredFileContent -Path $configPath -Label "config.json"
-        $script:readmeContent = & $readRequiredFileContent -Path $readmePath -Label "README.md"
-        $script:englishReadmeContent = & $readRequiredFileContent -Path $englishReadmePath -Label "README.en.md"
-        $script:versionContent = & $readRequiredFileContent -Path $versionPath -Label "VERSION.txt"
-        $script:gitignoreContent = & $readRequiredFileContent -Path $gitignorePath -Label ".gitignore"
-        $script:portableInstallContent = & $readRequiredFileContent -Path $portableInstallPath -Label "Install-Portable.ps1"
-        $script:portableUninstallContent = & $readRequiredFileContent -Path $portableUninstallPath -Label "Uninstall-Portable.ps1"
-        $script:installAutostartContent = & $readRequiredFileContent -Path $installAutostartPath -Label "Install-Autostart.ps1"
-        $script:uninstallAutostartContent = & $readRequiredFileContent -Path $uninstallAutostartPath -Label "Uninstall-Autostart.ps1"
-        $script:testWorkflowContent = & $readRequiredFileContent -Path $testWorkflowPath -Label ".github/workflows/test.yml"
-        $script:releaseWorkflowContent = & $readRequiredFileContent -Path $releaseWorkflowPath -Label ".github/workflows/release.yml"
+        $script:scriptContent = & $readRequiredFileContent -Path $script:scriptPath -Label "AudioSwitcher.ps1"
+        $script:nativeTypeContent = & $readRequiredFileContent -Path $script:nativeTypePath -Label "AudioSwitcher.Native.cs"
+        $script:configContent = & $readRequiredFileContent -Path $script:configPath -Label "config.json"
+        $script:readmeContent = & $readRequiredFileContent -Path $script:readmePath -Label "README.md"
+        $script:englishReadmeContent = & $readRequiredFileContent -Path $script:englishReadmePath -Label "README.en.md"
+        $script:versionContent = & $readRequiredFileContent -Path $script:versionPath -Label "VERSION.txt"
+        $script:gitignoreContent = & $readRequiredFileContent -Path $script:gitignorePath -Label ".gitignore"
+        $script:portableInstallContent = & $readRequiredFileContent -Path $script:portableInstallPath -Label "Install-Portable.ps1"
+        $script:portableUninstallContent = & $readRequiredFileContent -Path $script:portableUninstallPath -Label "Uninstall-Portable.ps1"
+        $script:installAutostartContent = & $readRequiredFileContent -Path $script:installAutostartPath -Label "Install-Autostart.ps1"
+        $script:uninstallAutostartContent = & $readRequiredFileContent -Path $script:uninstallAutostartPath -Label "Uninstall-Autostart.ps1"
+        $script:testWorkflowContent = & $readRequiredFileContent -Path $script:testWorkflowPath -Label ".github/workflows/test.yml"
+        $script:releaseWorkflowContent = & $readRequiredFileContent -Path $script:releaseWorkflowPath -Label ".github/workflows/release.yml"
     }
 
     It "has all expected project files" {
         $paths = @(
-            $scriptPath,
-            $nativeTypePath,
-            $configPath,
-            $readmePath,
-            $englishReadmePath,
-            $versionPath,
-            $iconPath,
-            $gitignorePath,
-            $launcherPath,
-            $portableInstallPath,
-            $portableUninstallPath,
-            $installAutostartPath,
-            $uninstallAutostartPath,
-            $testWorkflowPath,
-            $releaseWorkflowPath
+            $script:scriptPath,
+            $script:nativeTypePath,
+            $script:configPath,
+            $script:readmePath,
+            $script:englishReadmePath,
+            $script:versionPath,
+            $script:iconPath,
+            $script:gitignorePath,
+            $script:launcherPath,
+            $script:portableInstallPath,
+            $script:portableUninstallPath,
+            $script:installAutostartPath,
+            $script:uninstallAutostartPath,
+            $script:testWorkflowPath,
+            $script:releaseWorkflowPath
         )
 
         foreach ($path in $paths) {
@@ -334,7 +334,7 @@ Describe "AudioSwitcher repository smoke tests" {
     It "compiles the native interop and enumerates devices" {
         Add-Type -AssemblyName System.Windows.Forms
         Add-Type -AssemblyName System.Drawing
-        Add-Type -ReferencedAssemblies (Resolve-WindowsFormsReferences) -Path $nativeTypePath
+        Add-Type -ReferencedAssemblies (Resolve-WindowsFormsReferences) -Path $script:nativeTypePath
 
         [void][PortableAudioSwitcher.AudioSwitcher]
         [void][PortableAudioSwitcher.HotkeyWindow]
@@ -386,7 +386,7 @@ if (`$winShiftS.Modifiers -ne 12 -or `$winShiftS.Key -ne [uint32][int][System.Wi
     }
 
     It "parses helper scripts and validates launcher" {
-        $launcherContent = Get-Content -LiteralPath $launcherPath -Raw
+        $launcherContent = Get-Content -LiteralPath $script:launcherPath -Raw
         Assert-Match -Content $launcherContent -Pattern 'AudioSwitcher\.ps1' -Message "Launcher does not call AudioSwitcher.ps1."
         Assert-Match -Content $launcherContent -Pattern 'ExecutionPolicy Bypass' -Message "Launcher does not bypass local execution policy for portable start."
 
