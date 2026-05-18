@@ -1,9 +1,9 @@
 $ErrorActionPreference = "Stop"
 
 $repoRoot = $PSScriptRoot
-$launcherPath = Join-Path $repoRoot "Start-AudioSwitcher.bat"
-if (-not (Test-Path -LiteralPath $launcherPath)) {
-    throw "Start-AudioSwitcher.bat wurde nicht gefunden: $launcherPath"
+$scriptPath = Join-Path $repoRoot "AudioSwitcher.ps1"
+if (-not (Test-Path -LiteralPath $scriptPath)) {
+    throw "AudioSwitcher.ps1 wurde nicht gefunden: $scriptPath"
 }
 
 $iconPath = Join-Path $repoRoot "Assets\AudioSwitcher.ico"
@@ -13,7 +13,8 @@ $shortcutPath = Join-Path $startupFolder "Audio Switcher.lnk"
 
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($shortcutPath)
-$shortcut.TargetPath = $launcherPath
+$shortcut.TargetPath = "powershell.exe"
+$shortcut.Arguments = "-STA -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
 $shortcut.WorkingDirectory = $repoRoot
 $shortcut.WindowStyle = 7
 $shortcut.Description = "Audio Switcher beim Windows-Start ausfuehren"
