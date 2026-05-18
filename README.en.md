@@ -180,7 +180,10 @@ The normal GitHub Actions test pipeline builds a portable `AudioSwitcher.zip` af
 
 The ZIP file is not stored directly in the repository. Open GitHub, go to `Actions`, select the latest successful `Test` run, and download the `AudioSwitcher` artifact. That artifact contains the portable `AudioSwitcher.zip`.
 
-Tagged releases are handled by `.github/workflows/release.yml`. A tag like `v1.0.0` creates a GitHub Release with the ZIP attached.
+Visible downloads under `Releases` are handled by `.github/workflows/release.yml`.
+
+- Every push to `main` updates a `latest` pre-release with the current ZIP.
+- You can still create versioned releases with tags like `v1.0.0`.
 
 ```powershell
 git tag v1.0.0
@@ -208,6 +211,8 @@ Only active recording devices are included. Check Windows `Settings` -> `System`
 ### Find The ZIP In GitHub Actions
 
 The ZIP is not stored directly in the repository. Open GitHub `Actions`, select the latest successful `Test` run, and download the `AudioSwitcher` entry under `Artifacts`. That download contains the portable `AudioSwitcher.zip`.
+
+Alternatively, check `Releases` for the visible `latest` entry with the attached ZIP.
 
 ### Check Startup
 

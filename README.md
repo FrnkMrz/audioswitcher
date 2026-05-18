@@ -201,7 +201,10 @@ Die normale GitHub-Actions-Pipeline baut nach dem Smoke-Test ein portables `Audi
 
 Die ZIP-Datei liegt nicht direkt im Repository. Du findest sie in GitHub unter `Actions` -> letzter erfolgreicher `Test`-Lauf -> `Artifacts` -> `AudioSwitcher`. Dort laedst du ein GitHub-Artifact herunter, in dem die portable `AudioSwitcher.zip` enthalten ist.
 
-Fuer echte Releases gibt es zusaetzlich den Workflow `.github/workflows/release.yml`. Bei Tags wie `v1.0.0` wird ein GitHub Release mit ZIP-Anhang erzeugt.
+Fuer sichtbare Downloads unter `Releases` gibt es zusaetzlich den Workflow `.github/workflows/release.yml`.
+
+- Bei jedem Push auf `main` wird ein `latest`-Pre-Release mit aktueller ZIP aktualisiert.
+- Optional kannst du weiterhin ein versionsgebundenes Release ueber Tags wie `v1.0.0` erzeugen.
 
 ```powershell
 git tag v1.0.0
@@ -229,6 +232,8 @@ Es werden nur aktive Aufnahmegeraete beruecksichtigt. Pruefe in Windows unter `E
 ### ZIP in GitHub Actions finden
 
 Die ZIP liegt nicht direkt im Repository. Oeffne in GitHub `Actions`, waehle den letzten erfolgreichen `Test`-Lauf und lade unten bei `Artifacts` den Eintrag `AudioSwitcher` herunter. Darin liegt die portable `AudioSwitcher.zip`.
+
+Alternativ findest du unter `Releases` immer einen sichtbaren `latest`-Eintrag mit ZIP-Anhang.
 
 ### Autostart pruefen
 

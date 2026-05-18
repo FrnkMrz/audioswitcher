@@ -229,7 +229,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Tests\Test-AudioSwitch
 ### 8.2 CI
 
 - [.github/workflows/test.yml](.github/workflows/test.yml): Testpipeline inklusive ZIP-Build
-- [.github/workflows/release.yml](.github/workflows/release.yml): Releasepipeline fuer getaggte Versionen
+- [.github/workflows/release.yml](.github/workflows/release.yml): Releasepipeline fuer sichtbare ZIP-Assets unter Releases (auch ohne Tag via latest-Pre-Release)
 
 Hinweis: Die CI testet Struktur, Parsing und Build-Aspekte. Ein echter End-to-End-Audiowechsel in einer interaktiven Desktop-Session ist im Hosted-Runner nur eingeschraenkt abbildbar.
 
@@ -272,7 +272,7 @@ Das Tool verarbeitet nur lokal verfuegbare Geraetenamen und lokale Benutzereinga
 2. README und diese Doku auf Konsistenz pruefen.
 3. Tests lokal ausfuehren.
 4. CI-Ergebnis auf windows-latest pruefen.
-5. Tag erstellen und Release-Workflow ausloesen.
+5. Release-Workflow ueber main (latest) oder optional per Versionstag veroeffentlichen.
 
 ### 11.2 Code-Ownership-Empfehlung
 
