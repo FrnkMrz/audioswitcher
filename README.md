@@ -270,6 +270,14 @@ Die GitHub-Actions-Pipeline laeuft auf `windows-latest` und fuehrt einen Smoke-T
 
 Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiogeraet auf dem Runner.
 
+Lokal kannst du denselben Test-Runner wie in CI starten:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Tests\Test-AudioSwitcher.ps1
+```
+
+Der Runner startet eine Pester-Suite aus `Tests/AudioSwitcher.Tests.ps1`.
+
 ## Dateien
 
 | Datei | Zweck |
@@ -286,7 +294,8 @@ Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiog
 | `README.md` | Deutsche Dokumentation mit Quickguide |
 | `README.en.md` | Englische Dokumentation |
 | `VERSION.txt` | Versionshinweis fuer das portable ZIP |
-| `Tests/Test-AudioSwitcher.ps1` | Smoke-Test fuer CI |
+| `Tests/Test-AudioSwitcher.ps1` | CI-kompatibler Test-Runner (startet Pester) |
+| `Tests/AudioSwitcher.Tests.ps1` | Pester-Suite mit Smoke- und Lifecycle-Tests |
 | `.github/workflows/test.yml` | Testet das Tool und baut ein portables ZIP |
 | `.github/workflows/release.yml` | Baut und veroeffentlicht ein Release-ZIP |
 

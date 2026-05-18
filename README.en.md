@@ -241,6 +241,14 @@ The GitHub Actions pipeline runs on `windows-latest` and performs a smoke test:
 
 The test does not keep the background program running and does not change the runner's audio device.
 
+You can run the same test runner locally:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Tests\Test-AudioSwitcher.ps1
+```
+
+That runner executes the Pester suite from `Tests/AudioSwitcher.Tests.ps1`.
+
 ## Files
 
 | File | Purpose |
@@ -257,7 +265,8 @@ The test does not keep the background program running and does not change the ru
 | `README.md` | German documentation with quick guide |
 | `README.en.md` | English documentation |
 | `VERSION.txt` | Version note for the portable ZIP |
-| `Tests/Test-AudioSwitcher.ps1` | CI smoke test |
+| `Tests/Test-AudioSwitcher.ps1` | CI-compatible test runner (invokes Pester) |
+| `Tests/AudioSwitcher.Tests.ps1` | Pester suite with smoke and lifecycle checks |
 | `.github/workflows/test.yml` | Tests the tool and builds a portable ZIP |
 | `.github/workflows/release.yml` | Builds and publishes release ZIPs |
 
