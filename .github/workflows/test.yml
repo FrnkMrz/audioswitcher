@@ -21,6 +21,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Ensure Pester is available
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $pester = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
+          if (-not $pester) {
+            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+          }
+          Import-Module Pester -ErrorAction Stop
+
       - name: Run PowerShell smoke tests
         shell: powershell
         run: ./Tests/Test-AudioSwitcher.ps1
