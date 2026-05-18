@@ -363,6 +363,7 @@ function Show-SwitchNotification {
     $messageSize = [System.Windows.Forms.TextRenderer]::MeasureText($displayMessage, $messageLabel.Font)
     $formWidth = [Math]::Max($titleSize.Width, $messageSize.Width) + $sideMargin * 2 + 4
     $formWidth = [Math]::Max($formWidth, 280)
+    $formWidth = [Math]::Min($formWidth, 600)
     $messageLabelTop = $topMargin + $titleSize.Height + $labelGap
     $formHeight = $messageLabelTop + $messageSize.Height + $bottomMargin
 

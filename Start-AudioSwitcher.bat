@@ -1,3 +1,3 @@
 @echo off
 set "SCRIPT_DIR=%~dp0"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%AudioSwitcher.ps1"
+powershell.exe -STA -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%AudioSwitcher.ps1"
