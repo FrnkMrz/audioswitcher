@@ -25,6 +25,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
+          $minimumPesterVersion = [Version]"5.0.0"
           if (-not (Get-PackageProvider -ListAvailable -Name NuGet -ErrorAction SilentlyContinue)) {
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
           }
@@ -35,10 +36,15 @@ jobs:
           }
 
           $pester = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
-          if (-not $pester) {
+          if (-not $pester -or $pester.Version -lt $minimumPesterVersion) {
             Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
           }
-          Import-Module Pester -ErrorAction Stop
+
+          Import-Module Pester -MinimumVersion 5.0.0 -Force -ErrorAction Stop
+          $loadedPester = Get-Module -Name Pester
+          if (-not $loadedPester -or $loadedPester.Version -lt $minimumPesterVersion) {
+            throw "Pester >= 5.0.0 is required for the smoke tests. Loaded: $($loadedPester.Version)"
+          }
 
       - name: Run PowerShell smoke tests
         shell: powershell
