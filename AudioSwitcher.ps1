@@ -342,33 +342,64 @@ function Show-SwitchNotification {
     $titleLabel.Text = $title
     $titleLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 190, 205)
     $titleLabel.Font = [System.Drawing.Font]::new("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
-    $titleLabel.AutoSize = $true
+    # AutoSize muss deaktiviert sein, damit wir eine feste Breite vergeben koennen.
+    # Nur mit fester Breite koennen lange Texte sauber abgeschnitten/ellipsiert dargestellt werden.
+    $titleLabel.AutoSize = $false
 
     $messageLabel = [System.Windows.Forms.Label]::new()
     $messageLabel.Text = $displayMessage
     $messageLabel.ForeColor = [System.Drawing.Color]::White
     $messageLabel.Font = [System.Drawing.Font]::new("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
-    $messageLabel.AutoSize = $true
-    # AutoEllipsis greift wenn das Label schmaler als der Text ist (z. B. bei sehr langen Geraetebezeichnungen).
+    # AutoSize muss ebenfalls deaktiviert sein, damit die explizit gesetzte Breite wirksam ist.
+    $messageLabel.AutoSize = $false
+    # AutoEllipsis greift nur dann sichtbar, wenn das Label eine feste (begrenzte) Breite hat.
     $messageLabel.AutoEllipsis = $true
 
-    # Die Formgröße wird dynamisch berechnet. SetHighDpiMode(PerMonitorV2) is enabled
-    # vor dem Erstellen von Forms, damit die Pixel auf skalierten Displays korrekt bleiben.
-    # Berechne Formgröße dynamisch auf Basis der tatsächlichen Textlänge.
+    # Die Formgroesse wird dynamisch berechnet.
+    # SetHighDpiMode(PerMonitorV2) ist bereits vor dem Erstellen der Form aktiv,
+    # damit die Pixelmasse auf skalierten Displays korrekt bleiben.
+
+    # Diese Abstaende definieren den Innenabstand und den vertikalen Aufbau der Notification.
     $sideMargin = 18
     $topMargin = 12
     $labelGap = 4
     $bottomMargin = 12
+
+    # Wir messen die benoetigte Textgroesse fuer beide Labels anhand ihrer Schriftarten.
+    # Diese Werte sind die Grundlage fuer eine dynamische Groesse der Notification.
     $titleSize = [System.Windows.Forms.TextRenderer]::MeasureText($title, $titleLabel.Font)
     $messageSize = [System.Windows.Forms.TextRenderer]::MeasureText($displayMessage, $messageLabel.Font)
+
+    # Die Breite orientiert sich am laengeren Text (Titel oder Nachricht)
+    # plus horizontalem Innenabstand auf beiden Seiten.
     $formWidth = [Math]::Max($titleSize.Width, $messageSize.Width) + $sideMargin * 2 + 4
+
+    # Mindestbreite verhindert ein zu schmales, unruhiges Layout bei kurzen Texten.
     $formWidth = [Math]::Max($formWidth, 280)
+
+    # Obergrenze: Die Form darf maximal 600 Pixel breit werden.
     $formWidth = [Math]::Min($formWidth, 600)
+
+    # Innenbreite der Labels: gesamte Formbreite minus Seitenabstand links und rechts.
+    # Diese exakte Breite wird gleich per Size-Objekt auf beide Labels gesetzt.
+    $labelWidth = $formWidth - ($sideMargin * 2)
+
+    # Vertikale Position des zweiten Labels direkt unter dem Titel mit definiertem Abstand.
     $messageLabelTop = $topMargin + $titleSize.Height + $labelGap
+
+    # Beide Labels erhalten eine feste Groesse (Breite = labelWidth),
+    # damit AutoEllipsis bei langen Texten zuverlässig greift.
+    $titleLabel.Size = [System.Drawing.Size]::new($labelWidth, $titleSize.Height)
+    $messageLabel.Size = [System.Drawing.Size]::new($labelWidth, $messageSize.Height)
+
+    # Die Formhoehe ergibt sich aus oberem Rand + beide Labelhoehen + Zwischenabstand + unterem Rand.
     $formHeight = $messageLabelTop + $messageSize.Height + $bottomMargin
 
+    # Positionierung der Labels innerhalb der Form anhand der zuvor berechneten Abstaende.
     $titleLabel.Location = [System.Drawing.Point]::new($sideMargin, $topMargin)
     $messageLabel.Location = [System.Drawing.Point]::new($sideMargin, $messageLabelTop)
+
+    # ClientSize setzt exakt die nutzbare Innenflaeche der Notification.
     $form.ClientSize = [System.Drawing.Size]::new($formWidth, $formHeight)
 
     $form.Controls.Add($titleLabel)

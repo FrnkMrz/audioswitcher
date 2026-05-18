@@ -238,6 +238,7 @@ Describe "AudioSwitcher repository smoke tests" {
         & $script:AssertMatch -Content $script:scriptContent -Pattern 'AudioDeviceKind\]::Input' -Message "Input hotkey window is missing."
         & $script:AssertMatch -Content $script:scriptContent -Pattern 'MOD_CONTROL' -Message "Hotkey modifier constants should be documented."
         & $script:AssertMatch -Content $script:scriptContent -Pattern 'PerMonitorV2\) is enabled' -Message "Fixed notification size should mention DPI scaling."
+        & $script:AssertMatch -Content $script:scriptContent -Pattern '\[Math\]::Min\(\$formWidth,\s*600\)' -Message "Die Benachrichtigungsbreite wird nicht auf maximal 600 Pixel gedeckelt (erwartet: [Math]::Min(`$formWidth, 600))."
     }
 
     It "contains required native and packaging features" {
