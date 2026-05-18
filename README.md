@@ -6,6 +6,8 @@ Ein kleines, portables PowerShell-Tool, das per globalem Hotkey sofort zum naech
 
 English documentation: [README.en.md](README.en.md)
 
+Ausfuehrliche Projektdokumentation: [DOKUMENTATION.md](DOKUMENTATION.md)
+
 ## Deutscher Quickguide
 
 1. ZIP aus GitHub Actions herunterladen oder Repository klonen.

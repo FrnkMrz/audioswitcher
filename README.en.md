@@ -6,6 +6,8 @@ A small portable PowerShell tool that switches to the next active Windows audio 
 
 German documentation: [README.md](README.md)
 
+Comprehensive project documentation (German): [DOKUMENTATION.md](DOKUMENTATION.md)
+
 ## Quick Start
 
 Download the GitHub Actions artifact or clone the repository on Windows 11:
