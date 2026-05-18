@@ -43,6 +43,7 @@ Nicht im Scope:
 ### 3.2 Laufzeitvoraussetzungen
 
 - PowerShell 5.1 oder neuer
+- PowerShell muss im STA-Modus (Single-Threaded Apartment) laufen. `Start-AudioSwitcher.bat` stellt das sicher. Wird das Skript direkt gestartet, prueft es den Apartment-Zustand und bricht mit einer klaren Fehlermeldung ab, wenn MTA erkannt wird.
 - .NET/Windows Forms Laufzeitkomponenten (im Windows-Client standardmaessig vorhanden)
 
 ### 3.3 Rechte
@@ -98,8 +99,8 @@ Beispiel:
 - ShowTray: Tray-Symbol ein/aus
 - NotificationDurationMs: Sichtdauer des Overlays in Millisekunden (Minimum 500)
 - NotificationPosition: BottomRight, BottomLeft, TopRight oder TopLeft
-- ExcludedOutputDeviceNamePatterns: Wildcard-Muster fuer auszuschliessende Ausgabegeraete
-- ExcludedInputDeviceNamePatterns: Wildcard-Muster fuer auszuschliessende Eingabegeraete
+- ExcludedOutputDeviceNamePatterns: Wildcard-Muster fuer auszuschliessende Ausgabegeraete (`*` fuer beliebig viele Zeichen, `?` fuer genau ein Zeichen)
+- ExcludedInputDeviceNamePatterns: Wildcard-Muster fuer auszuschliessende Eingabegeraete (`*` fuer beliebig viele Zeichen, `?` fuer genau ein Zeichen)
 
 ### 5.2 Validierung beim Start
 
@@ -248,6 +249,7 @@ Das Tool verarbeitet nur lokal verfuegbare Geraetenamen und lokale Benutzereinga
 ### 9.3 Bekannte technische Risiken
 
 - Nutzung der undokumentierten COM-Schnittstelle IPolicyConfig
+- COM-Fehler beim Setzen des Standardgeraets werden separat als `COMException` gefangen und liefern HRESULT sowie Geraetenamen in der Fehlermeldung
 - moegliche Inkompatibilitaet bei zukuenftigen Windows-Aenderungen
 - Hotkey-Konflikte mit Drittsoftware
 
@@ -258,6 +260,7 @@ Das Tool verarbeitet nur lokal verfuegbare Geraetenamen und lokale Benutzereinga
 
 ## 10. Troubleshooting-Matrix
 
+- MTA-Fehler beim Start: PowerShell laeuft im MTA-Modus. Start ueber `Start-AudioSwitcher.bat` verwenden (startet mit `-STA`)
 - Hotkey registriert nicht: andere Kombination waehlen, Konflikt mit OS/App
 - Kein Mikrofon in Rotation: Geraet aktivieren, in Windows pruefen, Exclude-Patterns pruefen
 - Keine Benachrichtigung sichtbar: NotificationPosition pruefen, ggf. ShowTray/NoTray Verhalten testen

@@ -116,7 +116,7 @@ Default settings are stored in `config.json`:
 
 `NotificationPosition` supports `BottomRight`, `BottomLeft`, `TopRight`, and `TopLeft`.
 
-Output and input devices can be excluded from their rotations with wildcard patterns:
+Output and input devices can be excluded from their rotations with wildcard patterns (`*` matches any number of characters, `?` matches exactly one character):
 
 ```json
 "ExcludedOutputDeviceNamePatterns": [
@@ -198,7 +198,7 @@ If startup says that a hotkey is already used, Windows or another app has reserv
 
 ### PowerShell Blocks Startup
 
-Prefer launching `Start-AudioSwitcher.bat`, because it already starts PowerShell with `ExecutionPolicy Bypass`. If Windows blocks downloaded files, open PowerShell in the extracted folder and run:
+Prefer launching `Start-AudioSwitcher.bat`, because it already starts PowerShell with `ExecutionPolicy Bypass` and in STA mode (required for Windows Forms). If Windows blocks downloaded files, open PowerShell in the extracted folder and run:
 
 ```powershell
 Get-ChildItem -File | Unblock-File

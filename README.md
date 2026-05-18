@@ -137,7 +137,7 @@ Die Datei `config.json` steuert die Standardwerte:
 
 `NotificationPosition` akzeptiert `BottomRight`, `BottomLeft`, `TopRight` und `TopLeft`.
 
-Geraete koennen getrennt fuer Ausgabe und Eingabe mit Wildcards aus der Rotation genommen werden:
+Geraete koennen getrennt fuer Ausgabe und Eingabe mit Wildcards aus der Rotation genommen werden (`*` steht fuer beliebig viele Zeichen, `?` fuer genau ein Zeichen):
 
 ```json
 "ExcludedOutputDeviceNamePatterns": [
