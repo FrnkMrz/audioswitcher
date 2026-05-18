@@ -362,7 +362,7 @@ namespace PortableAudioSwitcher
     }
 
     [ComImport]
-    [Guid("0bd7a1be-7a1a-44db-8397-c0bfeaea36bb")]
+    [Guid("0bd7a1be-7a1a-44db-8397-cc5392387b5e")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IMMDeviceCollection
     {

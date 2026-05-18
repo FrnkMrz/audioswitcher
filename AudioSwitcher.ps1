@@ -10,6 +10,16 @@ $ErrorActionPreference = "Stop"
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class AudioSwitcherUser32
+{
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool DestroyIcon(IntPtr hIcon);
+}
+"@
 
 try {
     [System.Windows.Forms.Application]::SetHighDpiMode([System.Windows.Forms.HighDpiMode]::PerMonitorV2) | Out-Null
@@ -181,6 +191,102 @@ function Write-AudioSwitcherDeviceList {
     else {
         foreach ($device in $inputs) {
             Write-Host "- $device"
+        }
+    }
+}
+
+function Get-AudioSwitcherIconPath {
+    $iconPath = Join-Path $PSScriptRoot "Assets\AudioSwitcher.ico"
+    if (Test-Path -LiteralPath $iconPath) {
+        return $iconPath
+    }
+
+    $null
+}
+
+function New-AudioSwitcherTrayIcon {
+    $iconPath = Get-AudioSwitcherIconPath
+    if ($iconPath) {
+        return [System.Drawing.Icon]::new($iconPath)
+    }
+
+    $bitmap = $null
+    $graphics = $null
+    $backgroundBrush = $null
+    $speakerBrush = $null
+    $outerRingPen = $null
+    $waveInnerPen = $null
+    $waveOuterPen = $null
+    $tempIcon = $null
+    $iconHandle = [IntPtr]::Zero
+
+    try {
+        $bitmap = [System.Drawing.Bitmap]::new(32, 32, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+        $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+        $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+        $graphics.Clear([System.Drawing.Color]::Transparent)
+
+        $backgroundBrush = [System.Drawing.Drawing2D.LinearGradientBrush]::new(
+            [System.Drawing.Rectangle]::new(2, 2, 28, 28),
+            [System.Drawing.Color]::FromArgb(255, 20, 111, 140),
+            [System.Drawing.Color]::FromArgb(255, 36, 185, 173),
+            45.0)
+        $graphics.FillEllipse($backgroundBrush, 2, 2, 28, 28)
+
+        $outerRingPen = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(220, 236, 246, 248), 1.4)
+        $graphics.DrawEllipse($outerRingPen, 2, 2, 27, 27)
+
+        $speakerBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(248, 250, 252))
+        $graphics.FillRectangle($speakerBrush, 8, 12, 4, 8)
+        $graphics.FillPolygon($speakerBrush, @(
+                [System.Drawing.Point]::new(11, 12),
+                [System.Drawing.Point]::new(18, 8),
+                [System.Drawing.Point]::new(18, 24),
+                [System.Drawing.Point]::new(11, 20)
+            ))
+
+        $waveInnerPen = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(255, 255, 205, 96), 2.2)
+        $waveInnerPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
+        $waveInnerPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
+        $graphics.DrawArc($waveInnerPen, 14, 11, 6, 10, -45, 90)
+
+        $waveOuterPen = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(255, 255, 171, 66), 2.2)
+        $waveOuterPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
+        $waveOuterPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
+        $graphics.DrawArc($waveOuterPen, 14, 8, 10, 16, -50, 100)
+
+        $iconHandle = $bitmap.GetHicon()
+        $tempIcon = [System.Drawing.Icon]::FromHandle($iconHandle)
+        return $tempIcon.Clone()
+    }
+    finally {
+        if ($tempIcon) {
+            $tempIcon.Dispose()
+        }
+        if ($iconHandle -ne [IntPtr]::Zero) {
+            [AudioSwitcherUser32]::DestroyIcon($iconHandle) | Out-Null
+        }
+        if ($waveOuterPen) {
+            $waveOuterPen.Dispose()
+        }
+        if ($waveInnerPen) {
+            $waveInnerPen.Dispose()
+        }
+        if ($outerRingPen) {
+            $outerRingPen.Dispose()
+        }
+        if ($speakerBrush) {
+            $speakerBrush.Dispose()
+        }
+        if ($backgroundBrush) {
+            $backgroundBrush.Dispose()
+        }
+        if ($graphics) {
+            $graphics.Dispose()
+        }
+        if ($bitmap) {
+            $bitmap.Dispose()
         }
     }
 }
@@ -387,22 +493,62 @@ catch {
 }
 
 $tray = $null
+$trayIcon = $null
 $script:tray = $null
 if ($script:config.ShowTray) {
     $tray = [System.Windows.Forms.NotifyIcon]::new()
-    $tray.Icon = [System.Drawing.SystemIcons]::Application
+    try {
+        $trayIcon = New-AudioSwitcherTrayIcon
+    }
+    catch {
+        $trayIcon = $null
+    }
+
+    if ($trayIcon) {
+        $tray.Icon = $trayIcon
+    }
+    else {
+        $tray.Icon = [System.Drawing.SystemIcons]::Application
+    }
     $tray.Text = "Audio Switcher ($OutputHotkey / $InputHotkey)"
     $tray.Visible = $true
     $script:tray = $tray
 
     $menu = [System.Windows.Forms.ContextMenuStrip]::new()
-    $switchOutputItem = [System.Windows.Forms.ToolStripMenuItem]::new("Ausgabe wechseln")
+    $menu.ShowImageMargin = $false
+    $menu.BackColor = [System.Drawing.Color]::FromArgb(18, 27, 38)
+    $menu.ForeColor = [System.Drawing.Color]::FromArgb(238, 244, 247)
+
+    $menuTitle = [System.Windows.Forms.ToolStripMenuItem]::new("Audio Switcher")
+    $menuTitle.Enabled = $false
+    $menuTitle.Font = [System.Drawing.Font]::new("Segoe UI Semibold", 9.5, [System.Drawing.FontStyle]::Bold)
+    $menuTitle.ForeColor = [System.Drawing.Color]::FromArgb(238, 244, 247)
+    $menuTitle.BackColor = [System.Drawing.Color]::FromArgb(18, 27, 38)
+    $menuTitle.Padding = [System.Windows.Forms.Padding]::new(14, 8, 14, 2)
+    [void]$menu.Items.Add($menuTitle)
+
+    $menuHotkeys = [System.Windows.Forms.ToolStripMenuItem]::new("$OutputHotkey  |  $InputHotkey")
+    $menuHotkeys.Enabled = $false
+    $menuHotkeys.Font = [System.Drawing.Font]::new("Segoe UI", 8.5, [System.Drawing.FontStyle]::Regular)
+    $menuHotkeys.ForeColor = [System.Drawing.Color]::FromArgb(162, 186, 198)
+    $menuHotkeys.BackColor = [System.Drawing.Color]::FromArgb(18, 27, 38)
+    $menuHotkeys.Padding = [System.Windows.Forms.Padding]::new(14, 0, 14, 8)
+    [void]$menu.Items.Add($menuHotkeys)
+    [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
+
+    $switchOutputItem = [System.Windows.Forms.ToolStripMenuItem]::new("Ausgabe wechseln    $OutputHotkey")
+    $switchOutputItem.BackColor = [System.Drawing.Color]::FromArgb(18, 27, 38)
+    $switchOutputItem.ForeColor = [System.Drawing.Color]::FromArgb(238, 244, 247)
+    $switchOutputItem.Padding = [System.Windows.Forms.Padding]::new(14, 6, 14, 6)
     $switchOutputItem.add_Click({
         Invoke-AudioSwitcherSwitch -DeviceKind ([PortableAudioSwitcher.AudioDeviceKind]::Output)
     })
     [void]$menu.Items.Add($switchOutputItem)
 
-    $switchInputItem = [System.Windows.Forms.ToolStripMenuItem]::new("Mikrofon wechseln")
+    $switchInputItem = [System.Windows.Forms.ToolStripMenuItem]::new("Mikrofon wechseln    $InputHotkey")
+    $switchInputItem.BackColor = [System.Drawing.Color]::FromArgb(18, 27, 38)
+    $switchInputItem.ForeColor = [System.Drawing.Color]::FromArgb(238, 244, 247)
+    $switchInputItem.Padding = [System.Windows.Forms.Padding]::new(14, 6, 14, 6)
     $switchInputItem.add_Click({
         Invoke-AudioSwitcherSwitch -DeviceKind ([PortableAudioSwitcher.AudioDeviceKind]::Input)
     })
@@ -410,6 +556,9 @@ if ($script:config.ShowTray) {
     [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
 
     $quitItem = [System.Windows.Forms.ToolStripMenuItem]::new("Beenden")
+    $quitItem.BackColor = [System.Drawing.Color]::FromArgb(18, 27, 38)
+    $quitItem.ForeColor = [System.Drawing.Color]::FromArgb(255, 186, 178)
+    $quitItem.Padding = [System.Windows.Forms.Padding]::new(14, 6, 14, 6)
     $quitItem.add_Click({
         [System.Windows.Forms.Application]::Exit()
     })
@@ -418,8 +567,8 @@ if ($script:config.ShowTray) {
 }
 
 $switchHandler = {
-    param($sender, $eventArgs)
-    Publish-SwitchMessage -Message $eventArgs.Message
+    param($source, $switchEvent)
+    Publish-SwitchMessage -Message $switchEvent.Message
 }
 
 $outputWindow.add_Switched($switchHandler)
@@ -435,6 +584,9 @@ finally {
         $tray.Visible = $false
         $tray.Dispose()
         $script:tray = $null
+    }
+    if ($trayIcon) {
+        $trayIcon.Dispose()
     }
     if ($notificationTimer) {
         $notificationTimer.Stop()

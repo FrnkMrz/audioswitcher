@@ -26,6 +26,13 @@ Ctrl+Alt+M = switch microphone
 Every key press selects the next active device and shows the newly selected device in a small on-screen notification.
 The tray menu also provides direct actions for switching output, switching microphone, and quitting the tool.
 
+Recommended folder for permanent use:
+
+- `%LocalAppData%\Programs\AudioSwitcher`
+- alternatively `%UserProfile%\Tools\AudioSwitcher`
+
+Important: copy the folder to its final location first, then run `Install-Autostart.ps1`. The startup shortcut always points to that exact folder.
+
 ## Features
 
 - no administrator rights required
@@ -37,6 +44,8 @@ The tray menu also provides direct actions for switching output, switching micro
 - shows the current output or input device after each switch
 - can skip output and input devices by name pattern
 - runs in the background with a tray icon and direct switch actions
+- uses a fixed Audio Switcher icon for both tray and startup shortcut
+- shows a cleaner tray menu with the active hotkeys visible
 - can list active output and input devices with `-ListDevices`
 - optional Windows startup helper scripts
 - CI builds a portable release ZIP
@@ -180,6 +189,8 @@ The ZIP is not stored directly in the repository. Open GitHub `Actions`, select 
 
 Startup uses a shortcut in the Windows Startup folder. `Install-Autostart.ps1` creates it, and `Uninstall-Autostart.ps1` removes it. To inspect it manually, press `Win+R`, enter `shell:startup`, and check whether `Audio Switcher.lnk` exists.
 
+For a clean portable setup, keep the whole folder in a stable location such as `%LocalAppData%\Programs\AudioSwitcher`. Avoid `Downloads`, temporary extraction folders, or frequently moving cloud-sync work directories if startup should keep working.
+
 ## How It Works
 
 The tool uses Windows CoreAudio and Win32 APIs:
@@ -218,6 +229,7 @@ The test does not keep the background program running and does not change the ru
 | `config.json` | Default configuration |
 | `Install-Autostart.ps1` | Creates a Windows startup shortcut |
 | `Uninstall-Autostart.ps1` | Removes the startup shortcut |
+| `Assets/AudioSwitcher.ico` | Fixed icon used for tray and startup shortcut |
 | `README.md` | German documentation with quick guide |
 | `README.en.md` | English documentation |
 | `VERSION.txt` | Version note for the portable ZIP |

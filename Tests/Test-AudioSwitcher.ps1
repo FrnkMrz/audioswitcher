@@ -7,6 +7,7 @@ $configPath = Join-Path $repoRoot "config.json"
 $readmePath = Join-Path $repoRoot "README.md"
 $englishReadmePath = Join-Path $repoRoot "README.en.md"
 $versionPath = Join-Path $repoRoot "VERSION.txt"
+$iconPath = Join-Path $repoRoot "Assets/AudioSwitcher.ico"
 $gitignorePath = Join-Path $repoRoot ".gitignore"
 $launcherPath = Join-Path $repoRoot "Start-AudioSwitcher.bat"
 $installAutostartPath = Join-Path $repoRoot "Install-Autostart.ps1"
@@ -50,6 +51,7 @@ Assert-True (Test-Path $configPath) "config.json was not found."
 Assert-True (Test-Path $readmePath) "README.md was not found."
 Assert-True (Test-Path $englishReadmePath) "README.en.md was not found."
 Assert-True (Test-Path $versionPath) "VERSION.txt was not found."
+Assert-True (Test-Path $iconPath) "Assets/AudioSwitcher.ico was not found."
 Assert-True (Test-Path $gitignorePath) ".gitignore was not found."
 Assert-True (Test-Path $launcherPath) "Start-AudioSwitcher.bat was not found."
 Assert-True (Test-Path $installAutostartPath) "Install-Autostart.ps1 was not found."
@@ -80,11 +82,16 @@ Assert-True ($scriptContent -match 'ExcludedInputDeviceNamePatterns') "Input exc
 Assert-True ($scriptContent -match 'ExcludedDeviceNamePatterns') "Legacy excluded device patterns should remain supported."
 Assert-True ($scriptContent -match 'AudioSwitcher\.Native\.cs') "Native C# type file is not loaded."
 Assert-True ($scriptContent -match 'Show-SwitchNotification') "On-screen switch notification is missing."
+Assert-True ($scriptContent -match 'New-AudioSwitcherTrayIcon') "Custom tray icon builder is missing."
+Assert-True ($scriptContent -match 'Get-AudioSwitcherIconPath') "Tray icon path resolver is missing."
+Assert-True ($scriptContent -match 'DestroyIcon') "Tray icon handle cleanup is missing."
 Assert-True ($scriptContent -match 'Assert-AudioSwitcherConfig') "Config validation is missing."
 Assert-True ($scriptContent -match 'Write-AudioSwitcherDeviceList') "Device listing command is missing."
 Assert-True ($scriptContent -match 'ListDevices') "ListDevices parameter is missing."
 Assert-True ($scriptContent -match 'Ausgabe wechseln') "Tray output switch action is missing."
 Assert-True ($scriptContent -match 'Mikrofon wechseln') "Tray input switch action is missing."
+Assert-True ($scriptContent -match 'tray\.Icon = \$trayIcon') "Tray should prefer the custom icon when it is available."
+Assert-True ($scriptContent -match '\$menuHotkeys = \[System\.Windows\.Forms\.ToolStripMenuItem\]::new\("\$OutputHotkey  \|  \$InputHotkey"\)') "Tray menu should show the active hotkeys."
 Assert-True ($scriptContent -match 'Aktuelles Mikrofon') "Input switch notification title is missing."
 Assert-True ($scriptContent -match 'FormBorderStyle\]::None') "Notification should be borderless."
 Assert-True ($scriptContent -match '\.TopMost\s*=\s*\$true') "Notification should be topmost."
@@ -109,6 +116,7 @@ Assert-True ($nativeTypeContent -match 'SwitchOutputToNext') "Output switching e
 Assert-True ($nativeTypeContent -match 'SwitchInputToNext') "Input switching entry point is missing."
 Assert-True ($nativeTypeContent -match 'ListOutputDevices') "Output device listing entry point is missing."
 Assert-True ($nativeTypeContent -match 'ListInputDevices') "Input device listing entry point is missing."
+Assert-True ($nativeTypeContent -match '0bd7a1be-7a1a-44db-8397-cc5392387b5e') "IMMDeviceCollection IID is incorrect."
 Assert-True ($nativeTypeContent -match 'EDataFlow\.eRender') "Output switching should enumerate render devices."
 Assert-True ($nativeTypeContent -match 'EDataFlow\.eCapture') "Input switching should enumerate capture devices."
 Assert-True ($nativeTypeContent -match 'IsExcluded') "Device exclusion filtering is missing."
@@ -138,6 +146,7 @@ Assert-True ($versionContent -match '^AudioSwitcher\s+\d+\.\d+\.\d+') "VERSION.t
 Assert-True ($installAutostartContent -match 'WScript\.Shell') "Autostart installer should create a Windows shortcut."
 Assert-True ($installAutostartContent -match 'Startup') "Autostart installer should target the Startup folder."
 Assert-True ($installAutostartContent -match 'Start-AudioSwitcher\.bat') "Autostart installer should launch the batch file."
+Assert-True ($installAutostartContent -match 'IconLocation') "Autostart installer should assign the project icon to the shortcut."
 Assert-True ($uninstallAutostartContent -match 'Remove-Item') "Autostart uninstaller should remove the shortcut."
 Assert-True ($readmeContent -match 'Deutscher Quickguide') "German quick guide is missing."
 Assert-True ($readmeContent -match 'README\.en\.md') "German README should link the English documentation."
@@ -146,6 +155,8 @@ Assert-True ($readmeContent -match 'Ctrl\+Alt\+M') "German README should documen
 Assert-True ($readmeContent -match 'Mikrofon') "German README should document microphone switching."
 Assert-True ($readmeContent -match '-ListDevices') "German README should document device listing."
 Assert-True ($readmeContent -match 'Ausgabe wechseln') "German README should document tray switch actions."
+Assert-True ($readmeContent -match 'LocalAppData') "German README should recommend a stable install location."
+Assert-True ($readmeContent -match 'AudioSwitcher\.ico') "German README should document the fixed icon asset."
 Assert-True ($readmeContent -match 'VERSION\.txt') "German README should document the version file."
 Assert-True ($readmeContent -match 'Actions[\s\S]+Artifacts[\s\S]+AudioSwitcher') "German README should explain where to find the Actions ZIP artifact."
 Assert-True ($englishReadmeContent -match 'Audio Switcher for Windows 11') "English README title is missing."
@@ -154,6 +165,8 @@ Assert-True ($englishReadmeContent -match 'GitHub Actions test pipeline builds a
 Assert-True ($englishReadmeContent -match 'Ctrl\+Alt\+M') "English README should document the input hotkey."
 Assert-True ($englishReadmeContent -match 'microphone') "English README should document microphone switching."
 Assert-True ($englishReadmeContent -match '-ListDevices') "English README should document device listing."
+Assert-True ($englishReadmeContent -match 'LocalAppData') "English README should recommend a stable install location."
+Assert-True ($englishReadmeContent -match 'AudioSwitcher\.ico') "English README should document the fixed icon asset."
 Assert-True ($englishReadmeContent -match 'VERSION\.txt') "English README should document the version file."
 Assert-True ($englishReadmeContent -match 'not stored directly in the repository') "English README should explain that ZIP artifacts are not committed."
 Assert-True ($englishReadmeContent -match 'README\.md') "English README should link the German documentation."
@@ -162,7 +175,9 @@ Assert-True ($gitignoreContent -match '\*\.log') ".gitignore should ignore local
 Assert-True ($gitignoreContent -match '\.DS_Store') ".gitignore should ignore macOS metadata."
 Assert-True ($gitignoreContent -match '\*\.icloud') ".gitignore should ignore iCloud placeholder files."
 Assert-True ($testWorkflowContent -match 'VERSION\.txt') "Test ZIP should include VERSION.txt."
+Assert-True ($testWorkflowContent -match 'Assets') "Test ZIP should include the Assets folder."
 Assert-True ($releaseWorkflowContent -match 'Compress-Archive') "Release workflow should build a ZIP file."
+Assert-True ($releaseWorkflowContent -match 'Assets') "Release ZIP should include the Assets folder."
 Assert-True ($releaseWorkflowContent -match 'README\.en\.md') "Release ZIP should include English documentation."
 Assert-True ($releaseWorkflowContent -match 'VERSION\.txt') "Release ZIP should include VERSION.txt."
 Assert-True ($releaseWorkflowContent -match 'actions/upload-artifact@v4') "Release workflow should upload the ZIP artifact."
@@ -189,8 +204,24 @@ function Resolve-WindowsFormsReferences {
 
 Add-Type -ReferencedAssemblies (Resolve-WindowsFormsReferences) -Path $nativeTypePath
 
-Assert-True (("PortableAudioSwitcher.AudioSwitcher" -as [type]) -ne $null) "AudioSwitcher type was not compiled."
-Assert-True (("PortableAudioSwitcher.HotkeyWindow" -as [type]) -ne $null) "HotkeyWindow type was not compiled."
+try {
+    [void][PortableAudioSwitcher.AudioSwitcher]
+}
+catch {
+    throw "AudioSwitcher type was not compiled."
+}
+
+try {
+    [void][PortableAudioSwitcher.HotkeyWindow]
+}
+catch {
+    throw "HotkeyWindow type was not compiled."
+}
+
+$outputDevices = [PortableAudioSwitcher.AudioSwitcher]::ListOutputDevices()
+$inputDevices = [PortableAudioSwitcher.AudioSwitcher]::ListInputDevices()
+Assert-True ($null -ne $outputDevices) "Output device enumeration returned null."
+Assert-True ($null -ne $inputDevices) "Input device enumeration returned null."
 
 $scriptAst = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$parseErrors)
 $hotkeyFunctionAst = $scriptAst.Find({

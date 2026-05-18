@@ -27,6 +27,7 @@ jobs:
           $files = @(
             "AudioSwitcher.ps1",
             "AudioSwitcher.Native.cs",
+            "Assets",
             "Start-AudioSwitcher.bat",
             "config.json",
             "Install-Autostart.ps1",

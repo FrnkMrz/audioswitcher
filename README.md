@@ -16,6 +16,13 @@ English documentation: [README.en.md](README.en.md)
 6. Nach jedem Tastendruck zeigt eine kleine Einblendung das neue aktuelle Geraet.
 7. Rechtsklick auf das Tray-Symbol fuer `Ausgabe wechseln`, `Mikrofon wechseln` oder `Beenden`.
 
+Empfohlener Ablageort fuer den dauerhaften Einsatz:
+
+- `%LocalAppData%\Programs\AudioSwitcher`
+- alternativ `%UserProfile%\Tools\AudioSwitcher`
+
+Wichtig: Erst in den finalen Ordner kopieren und danach `Install-Autostart.ps1` ausfuehren. Die Autostart-Verknuepfung zeigt immer auf genau diesen Ordner.
+
 Autostart einrichten:
 
 ```powershell
@@ -39,6 +46,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall-Autostart.ps
 - zeigt nach jedem Wechsel kurz das aktuell aktive Ausgabe- oder Eingabegeraet an
 - kann bestimmte Ausgabe- und Eingabegeraete per Namensmuster auslassen
 - laeuft im Hintergrund mit Tray-Symbol und direkten Wechselaktionen
+- nutzt ein festes Audio-Switcher-Icon fuer Tray und Autostart-Verknuepfung
+- zeigt ein aufgeraeumtes Tray-Menue mit sichtbaren aktiven Hotkeys
 - kann aktive Ausgabe- und Eingabegeraete mit `-ListDevices` anzeigen
 - portabel als PowerShell-Skript plus optionaler Startdatei
 - Release-ZIP wird durch GitHub Actions gebaut
@@ -201,6 +210,8 @@ Die ZIP liegt nicht direkt im Repository. Oeffne in GitHub `Actions`, waehle den
 
 Der Autostart nutzt eine Verknuepfung im Windows-Startup-Ordner. Mit `Install-Autostart.ps1` wird sie angelegt, mit `Uninstall-Autostart.ps1` entfernt. Zum Kontrollieren kannst du `shell:startup` in `Win+R` eingeben und pruefen, ob dort `Audio Switcher.lnk` liegt.
 
+Fuer eine saubere portable Installation sollte der komplette Ordner dauerhaft an einem stabilen Ort liegen, zum Beispiel unter `%LocalAppData%\Programs\AudioSwitcher`. Vermeide `Downloads`, temporaere ZIP-Ordner oder wechselnde OneDrive-Arbeitsverzeichnisse, wenn der Autostart dauerhaft funktionieren soll.
+
 ## Beenden
 
 Rechtsklick auf das Tray-Symbol und `Beenden` waehlen. Alternativ kann das PowerShell-Fenster geschlossen werden.
@@ -247,6 +258,7 @@ Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiog
 | `config.json` | Standard-Konfiguration fuer Hotkey, Anzeige und ausgeschlossene Geraete |
 | `Install-Autostart.ps1` | Erstellt eine Windows-Autostart-Verknuepfung |
 | `Uninstall-Autostart.ps1` | Entfernt die Windows-Autostart-Verknuepfung |
+| `Assets/AudioSwitcher.ico` | Festes Icon fuer Tray und Autostart-Verknuepfung |
 | `README.md` | Deutsche Dokumentation mit Quickguide |
 | `README.en.md` | Englische Dokumentation |
 | `VERSION.txt` | Versionshinweis fuer das portable ZIP |
