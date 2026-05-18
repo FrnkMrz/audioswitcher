@@ -44,14 +44,17 @@ function Resolve-WindowsFormsReferences {
     catch {
     }
 
-    # System.Management.Automation ist in jedem PowerShell-Prozess geladen
-    # und wird für WildcardPattern im Namensvergleich benötigt.
+    # System.Management.Automation wird fuer WildcardPattern benoetigt.
+    # Location kann je nach Host leer sein, daher Fallback auf den Assembly-Namen.
     $smaLocation = [System.Management.Automation.WildcardPattern].Assembly.Location
     if ($smaLocation) {
         $references.Add($smaLocation)
     }
+    else {
+        $references.Add("System.Management.Automation.dll")
+    }
 
-    $references.ToArray()
+    $references | Select-Object -Unique | ForEach-Object { [string]$_ }
 }
 
 $nativeTypePath = Join-Path $PSScriptRoot "AudioSwitcher.Native.cs"

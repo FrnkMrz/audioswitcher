@@ -92,12 +92,16 @@ function Resolve-WindowsFormsReferences {
     }
 
     # System.Management.Automation wird fuer WildcardPattern in AudioSwitcher.Native.cs benoetigt.
+    # Location kann je nach Host leer sein, daher Fallback auf den Assembly-Namen.
     $smaLocation = [System.Management.Automation.WildcardPattern].Assembly.Location
     if ($smaLocation) {
         $references.Add($smaLocation)
     }
+    else {
+        $references.Add("System.Management.Automation.dll")
+    }
 
-    $references.ToArray()
+    $references | Select-Object -Unique | ForEach-Object { [string]$_ }
 }
 
 function Invoke-PortableInstallationLifecycleTests {
