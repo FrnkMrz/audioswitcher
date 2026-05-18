@@ -224,7 +224,7 @@ Describe "AudioSwitcher repository smoke tests" {
         Assert-Contains -Content $nativeTypeContent -ExpectedText 'EDataFlow.eRender' -Message "Output switching should enumerate render devices."
         Assert-Contains -Content $nativeTypeContent -ExpectedText 'EDataFlow.eCapture' -Message "Input switching should enumerate capture devices."
         Assert-Match -Content $nativeTypeContent -Pattern 'IsExcluded' -Message "Device exclusion filtering is missing."
-        Assert-Match -Content $nativeTypeContent -Pattern 'Regex\.Escape' -Message "Device exclusion patterns should be wildcard-safe."
+        Assert-Match -Content $nativeTypeContent -Pattern 'WildcardPattern' -Message "Device exclusion patterns should be wildcard-safe."
         Assert-Match -Content $nativeTypeContent -Pattern 'SetDefaultEndpoint' -Message "Audio endpoint switching entry point is missing."
         Assert-Match -Content $nativeTypeContent -Pattern 'DEVICE_STATE_ACTIVE' -Message "Active-device filtering is missing."
         Assert-Match -Content $nativeTypeContent -Pattern 'FinalReleaseComObject' -Message "COM object cleanup is missing."

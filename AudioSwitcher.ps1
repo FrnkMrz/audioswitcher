@@ -8,6 +8,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ([System.Threading.Thread]::CurrentThread.GetApartmentState() -ne [System.Threading.ApartmentState]::STA) {
+    throw "AudioSwitcher muss im STA-Modus (Single-Threaded Apartment) gestartet werden. Starten Sie PowerShell ohne -MTA, oder verwenden Sie: powershell.exe -STA -File AudioSwitcher.ps1"
+}
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type @"
@@ -38,6 +42,13 @@ function Resolve-WindowsFormsReferences {
         }
     }
     catch {
+    }
+
+    # System.Management.Automation ist in jedem PowerShell-Prozess geladen
+    # und wird für WildcardPattern im Namensvergleich benötigt.
+    $smaLocation = [System.Management.Automation.WildcardPattern].Assembly.Location
+    if ($smaLocation) {
+        $references.Add($smaLocation)
     }
 
     $references.ToArray()
@@ -313,12 +324,7 @@ function Show-SwitchNotification {
     $form.TopMost = $true
     $form.BackColor = [System.Drawing.Color]::FromArgb(32, 36, 42)
     $form.Opacity = 0.95
-    # Fixed notification pixels stay usable on scaled displays because
-    # SetHighDpiMode(PerMonitorV2) is enabled before any forms are created.
-    $form.Width = 440
-    $form.Height = 86
 
-    $titleLabel = [System.Windows.Forms.Label]::new()
     $title = "Aktuelle Audioausgabe"
     $displayMessage = $Message
     if ($Message -match '^Mikrofon:\s*(.+)$') {
@@ -329,20 +335,37 @@ function Show-SwitchNotification {
         $displayMessage = $Matches[1]
     }
 
+    $titleLabel = [System.Windows.Forms.Label]::new()
     $titleLabel.Text = $title
     $titleLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 190, 205)
     $titleLabel.Font = [System.Drawing.Font]::new("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
-    $titleLabel.Location = [System.Drawing.Point]::new(18, 12)
-    $titleLabel.Size = [System.Drawing.Size]::new(404, 18)
+    $titleLabel.AutoSize = $true
 
     $messageLabel = [System.Windows.Forms.Label]::new()
     $messageLabel.Text = $displayMessage
     $messageLabel.ForeColor = [System.Drawing.Color]::White
     $messageLabel.Font = [System.Drawing.Font]::new("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
-    $messageLabel.Location = [System.Drawing.Point]::new(18, 34)
-    $messageLabel.Size = [System.Drawing.Size]::new(404, 34)
+    $messageLabel.AutoSize = $true
+    # AutoEllipsis greift wenn das Label schmaler als der Text ist (z. B. bei sehr langen Geraetebezeichnungen).
     $messageLabel.AutoEllipsis = $true
-    $messageLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+
+    # Die Formgröße wird dynamisch berechnet. SetHighDpiMode(PerMonitorV2) is enabled
+    # vor dem Erstellen von Forms, damit die Pixel auf skalierten Displays korrekt bleiben.
+    # Berechne Formgröße dynamisch auf Basis der tatsächlichen Textlänge.
+    $sideMargin = 18
+    $topMargin = 12
+    $labelGap = 4
+    $bottomMargin = 12
+    $titleSize = [System.Windows.Forms.TextRenderer]::MeasureText($title, $titleLabel.Font)
+    $messageSize = [System.Windows.Forms.TextRenderer]::MeasureText($displayMessage, $messageLabel.Font)
+    $formWidth = [Math]::Max($titleSize.Width, $messageSize.Width) + $sideMargin * 2 + 4
+    $formWidth = [Math]::Max($formWidth, 280)
+    $messageLabelTop = $topMargin + $titleSize.Height + $labelGap
+    $formHeight = $messageLabelTop + $messageSize.Height + $bottomMargin
+
+    $titleLabel.Location = [System.Drawing.Point]::new($sideMargin, $topMargin)
+    $messageLabel.Location = [System.Drawing.Point]::new($sideMargin, $messageLabelTop)
+    $form.ClientSize = [System.Drawing.Size]::new($formWidth, $formHeight)
 
     $form.Controls.Add($titleLabel)
     $form.Controls.Add($messageLabel)

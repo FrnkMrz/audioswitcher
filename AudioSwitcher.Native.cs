@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Management.Automation;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace PortableAudioSwitcher
@@ -184,9 +184,17 @@ namespace PortableAudioSwitcher
                 AudioDevice next = devices[nextIndex];
 
                 policyConfig = (IPolicyConfig)(new CPolicyConfigClient());
-                ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eConsole), "eConsole");
-                ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eMultimedia), "eMultimedia");
-                ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eCommunications), "eCommunications");
+                try
+                {
+                    ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eConsole), "eConsole");
+                    ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eMultimedia), "eMultimedia");
+                    ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eCommunications), "eCommunications");
+                }
+                catch (COMException ex)
+                {
+                    throw new InvalidOperationException(
+                        "COM-Fehler beim Setzen des Standard-Audiogeraets '" + next.Name + "': HRESULT 0x" + ex.ErrorCode.ToString("X8") + " \u2013 " + ex.Message, ex);
+                }
 
                 return messagePrefix + ": " + next.Name;
             }
@@ -254,8 +262,8 @@ namespace PortableAudioSwitcher
             {
                 if (String.IsNullOrWhiteSpace(pattern)) continue;
 
-                string regexPattern = "^" + Regex.Escape(pattern.Trim()).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-                if (Regex.IsMatch(deviceName ?? String.Empty, regexPattern, RegexOptions.IgnoreCase))
+                var wp = new WildcardPattern(pattern.Trim(), WildcardOptions.IgnoreCase);
+                if (wp.IsMatch(deviceName ?? String.Empty))
                 {
                     return true;
                 }
