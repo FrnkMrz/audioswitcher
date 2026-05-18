@@ -91,6 +91,12 @@ function Resolve-WindowsFormsReferences {
     catch {
     }
 
+    # System.Management.Automation wird fuer WildcardPattern in AudioSwitcher.Native.cs benoetigt.
+    $smaLocation = [System.Management.Automation.WildcardPattern].Assembly.Location
+    if ($smaLocation) {
+        $references.Add($smaLocation)
+    }
+
     $references.ToArray()
 }
 
