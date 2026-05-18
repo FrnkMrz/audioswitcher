@@ -25,6 +25,15 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
+          if (-not (Get-PackageProvider -ListAvailable -Name NuGet -ErrorAction SilentlyContinue)) {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
+          }
+
+          $gallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
+          if ($gallery -and $gallery.InstallationPolicy -ne "Trusted") {
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          }
+
           $pester = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
           if (-not $pester) {
             Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
