@@ -33,6 +33,28 @@ Recommended folder for permanent use:
 
 Important: copy the folder to its final location first, then run `Install-Autostart.ps1`. The startup shortcut always points to that exact folder.
 
+Install automatically into the recommended target folder:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-Portable.ps1
+```
+
+Install and enable startup in one step:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-Portable.ps1 -InstallAutostart
+```
+
+An existing `config.json` in the target folder is preserved by default. Use `-ReplaceConfig` if you explicitly want to overwrite it.
+
+Running the same command against an existing target folder keeps the installation updated cleanly. Managed files are replaced, no longer needed managed files are removed, and the existing `config.json` is preserved by default.
+
+Remove the portable installation again:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall-Portable.ps1
+```
+
 ## Features
 
 - no administrator rights required
@@ -226,6 +248,8 @@ The test does not keep the background program running and does not change the ru
 | `AudioSwitcher.ps1` | Main script with hotkey listener and notification UI |
 | `AudioSwitcher.Native.cs` | Native Windows hotkey and CoreAudio interop code |
 | `Start-AudioSwitcher.bat` | Double-click launcher for Windows |
+| `Install-Portable.ps1` | Copies the tool into a stable target folder for daily use |
+| `Uninstall-Portable.ps1` | Removes the portable installation and clears startup when present |
 | `config.json` | Default configuration |
 | `Install-Autostart.ps1` | Creates a Windows startup shortcut |
 | `Uninstall-Autostart.ps1` | Removes the startup shortcut |

@@ -36,6 +36,8 @@ jobs:
             "AudioSwitcher.Native.cs",
             "Assets",
             "Start-AudioSwitcher.bat",
+            "Install-Portable.ps1",
+            "Uninstall-Portable.ps1",
             "config.json",
             "Install-Autostart.ps1",
             "Uninstall-Autostart.ps1",

@@ -23,6 +23,28 @@ Empfohlener Ablageort fuer den dauerhaften Einsatz:
 
 Wichtig: Erst in den finalen Ordner kopieren und danach `Install-Autostart.ps1` ausfuehren. Die Autostart-Verknuepfung zeigt immer auf genau diesen Ordner.
 
+Automatisch in den empfohlenen Zielordner installieren:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-Portable.ps1
+```
+
+Direkt inklusive Autostart:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-Portable.ps1 -InstallAutostart
+```
+
+Eine vorhandene `config.json` im Zielordner bleibt dabei standardmaessig erhalten. Mit `-ReplaceConfig` kann sie bewusst ersetzt werden.
+
+Eine bestehende Installation im Zielordner wird mit demselben Befehl sauber aktualisiert. Verwaltete Dateien werden ersetzt, nicht mehr benoetigte verwaltete Dateien entfernt und die vorhandene `config.json` standardmaessig beibehalten.
+
+Portable Installation wieder entfernen:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Uninstall-Portable.ps1
+```
+
 Autostart einrichten:
 
 ```powershell
@@ -255,6 +277,8 @@ Der Test startet das Hintergrundprogramm nicht dauerhaft und aendert kein Audiog
 | `AudioSwitcher.ps1` | Hauptskript mit Hotkey-Listener und Audio-Umschaltung |
 | `AudioSwitcher.Native.cs` | Native Windows-Hotkey- und CoreAudio-Typen |
 | `Start-AudioSwitcher.bat` | Doppelklick-Starter fuer Windows |
+| `Install-Portable.ps1` | Kopiert das Tool in einen stabilen Zielordner fuer den Dauerbetrieb |
+| `Uninstall-Portable.ps1` | Entfernt die portable Installation und loest optional den Autostart |
 | `config.json` | Standard-Konfiguration fuer Hotkey, Anzeige und ausgeschlossene Geraete |
 | `Install-Autostart.ps1` | Erstellt eine Windows-Autostart-Verknuepfung |
 | `Uninstall-Autostart.ps1` | Entfernt die Windows-Autostart-Verknuepfung |

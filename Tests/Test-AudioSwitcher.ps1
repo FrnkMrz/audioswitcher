@@ -10,6 +10,8 @@ $versionPath = Join-Path $repoRoot "VERSION.txt"
 $iconPath = Join-Path $repoRoot "Assets/AudioSwitcher.ico"
 $gitignorePath = Join-Path $repoRoot ".gitignore"
 $launcherPath = Join-Path $repoRoot "Start-AudioSwitcher.bat"
+$portableInstallPath = Join-Path $repoRoot "Install-Portable.ps1"
+$portableUninstallPath = Join-Path $repoRoot "Uninstall-Portable.ps1"
 $installAutostartPath = Join-Path $repoRoot "Install-Autostart.ps1"
 $uninstallAutostartPath = Join-Path $repoRoot "Uninstall-Autostart.ps1"
 $testWorkflowPath = Join-Path $repoRoot ".github/workflows/test.yml"
@@ -54,6 +56,8 @@ Assert-True (Test-Path $versionPath) "VERSION.txt was not found."
 Assert-True (Test-Path $iconPath) "Assets/AudioSwitcher.ico was not found."
 Assert-True (Test-Path $gitignorePath) ".gitignore was not found."
 Assert-True (Test-Path $launcherPath) "Start-AudioSwitcher.bat was not found."
+Assert-True (Test-Path $portableInstallPath) "Install-Portable.ps1 was not found."
+Assert-True (Test-Path $portableUninstallPath) "Uninstall-Portable.ps1 was not found."
 Assert-True (Test-Path $installAutostartPath) "Install-Autostart.ps1 was not found."
 Assert-True (Test-Path $uninstallAutostartPath) "Uninstall-Autostart.ps1 was not found."
 Assert-True (Test-Path $testWorkflowPath) "Test workflow was not found."
@@ -66,6 +70,8 @@ $readmeContent = Get-Content -LiteralPath $readmePath -Raw
 $englishReadmeContent = Get-Content -LiteralPath $englishReadmePath -Raw
 $versionContent = Get-Content -LiteralPath $versionPath -Raw
 $gitignoreContent = Get-Content -LiteralPath $gitignorePath -Raw
+$portableInstallContent = Get-Content -LiteralPath $portableInstallPath -Raw
+$portableUninstallContent = Get-Content -LiteralPath $portableUninstallPath -Raw
 $installAutostartContent = Get-Content -LiteralPath $installAutostartPath -Raw
 $uninstallAutostartContent = Get-Content -LiteralPath $uninstallAutostartPath -Raw
 $testWorkflowContent = Get-Content -LiteralPath $testWorkflowPath -Raw
@@ -147,6 +153,17 @@ Assert-True ($installAutostartContent -match 'WScript\.Shell') "Autostart instal
 Assert-True ($installAutostartContent -match 'Startup') "Autostart installer should target the Startup folder."
 Assert-True ($installAutostartContent -match 'Start-AudioSwitcher\.bat') "Autostart installer should launch the batch file."
 Assert-True ($installAutostartContent -match 'IconLocation') "Autostart installer should assign the project icon to the shortcut."
+Assert-True ($portableInstallContent -match 'LOCALAPPDATA') "Portable installer should default to LocalAppData."
+Assert-True ($portableInstallContent -match 'Install-Autostart\.ps1') "Portable installer should be able to install autostart in the target directory."
+Assert-True ($portableInstallContent -match 'ReplaceConfig') "Portable installer should support preserving an existing config."
+Assert-True ($portableInstallContent -match 'Assets') "Portable installer should copy the Assets folder."
+Assert-True ($portableInstallContent -match 'ManagedPaths') "Portable installer should track managed install paths."
+Assert-True ($portableInstallContent -match 'Read-InstallState') "Portable installer should read an existing install state for updates."
+Assert-True ($portableInstallContent -match 'Write-InstallState') "Portable installer should write an install state manifest."
+Assert-True ($portableUninstallContent -match 'LOCALAPPDATA') "Portable uninstaller should default to LocalAppData."
+Assert-True ($portableUninstallContent -match 'CreateShortcut') "Portable uninstaller should inspect the startup shortcut before deleting it."
+Assert-True ($portableUninstallContent -match 'TargetPath') "Portable uninstaller should only remove autostart for the matching installation."
+Assert-True ($portableUninstallContent -match '\.audioswitcher-install\.json') "Portable uninstaller should recognize the install manifest."
 Assert-True ($uninstallAutostartContent -match 'Remove-Item') "Autostart uninstaller should remove the shortcut."
 Assert-True ($readmeContent -match 'Deutscher Quickguide') "German quick guide is missing."
 Assert-True ($readmeContent -match 'README\.en\.md') "German README should link the English documentation."
@@ -157,6 +174,9 @@ Assert-True ($readmeContent -match '-ListDevices') "German README should documen
 Assert-True ($readmeContent -match 'Ausgabe wechseln') "German README should document tray switch actions."
 Assert-True ($readmeContent -match 'LocalAppData') "German README should recommend a stable install location."
 Assert-True ($readmeContent -match 'AudioSwitcher\.ico') "German README should document the fixed icon asset."
+Assert-True ($readmeContent -match 'Install-Portable\.ps1') "German README should document the portable installer."
+Assert-True ($readmeContent -match 'Uninstall-Portable\.ps1') "German README should document the portable uninstaller."
+Assert-True ($readmeContent -match 'aktualisiert') "German README should document update behavior."
 Assert-True ($readmeContent -match 'VERSION\.txt') "German README should document the version file."
 Assert-True ($readmeContent -match 'Actions[\s\S]+Artifacts[\s\S]+AudioSwitcher') "German README should explain where to find the Actions ZIP artifact."
 Assert-True ($englishReadmeContent -match 'Audio Switcher for Windows 11') "English README title is missing."
@@ -167,6 +187,9 @@ Assert-True ($englishReadmeContent -match 'microphone') "English README should d
 Assert-True ($englishReadmeContent -match '-ListDevices') "English README should document device listing."
 Assert-True ($englishReadmeContent -match 'LocalAppData') "English README should recommend a stable install location."
 Assert-True ($englishReadmeContent -match 'AudioSwitcher\.ico') "English README should document the fixed icon asset."
+Assert-True ($englishReadmeContent -match 'Install-Portable\.ps1') "English README should document the portable installer."
+Assert-True ($englishReadmeContent -match 'Uninstall-Portable\.ps1') "English README should document the portable uninstaller."
+Assert-True ($englishReadmeContent -match 'updated') "English README should document update behavior."
 Assert-True ($englishReadmeContent -match 'VERSION\.txt') "English README should document the version file."
 Assert-True ($englishReadmeContent -match 'not stored directly in the repository') "English README should explain that ZIP artifacts are not committed."
 Assert-True ($englishReadmeContent -match 'README\.md') "English README should link the German documentation."
@@ -176,8 +199,10 @@ Assert-True ($gitignoreContent -match '\.DS_Store') ".gitignore should ignore ma
 Assert-True ($gitignoreContent -match '\*\.icloud') ".gitignore should ignore iCloud placeholder files."
 Assert-True ($testWorkflowContent -match 'VERSION\.txt') "Test ZIP should include VERSION.txt."
 Assert-True ($testWorkflowContent -match 'Assets') "Test ZIP should include the Assets folder."
+Assert-True ($testWorkflowContent -match 'Uninstall-Portable\.ps1') "Test ZIP should include the portable uninstaller."
 Assert-True ($releaseWorkflowContent -match 'Compress-Archive') "Release workflow should build a ZIP file."
 Assert-True ($releaseWorkflowContent -match 'Assets') "Release ZIP should include the Assets folder."
+Assert-True ($releaseWorkflowContent -match 'Uninstall-Portable\.ps1') "Release ZIP should include the portable uninstaller."
 Assert-True ($releaseWorkflowContent -match 'README\.en\.md') "Release ZIP should include English documentation."
 Assert-True ($releaseWorkflowContent -match 'VERSION\.txt') "Release ZIP should include VERSION.txt."
 Assert-True ($releaseWorkflowContent -match 'actions/upload-artifact@v4') "Release workflow should upload the ZIP artifact."
@@ -260,5 +285,13 @@ Assert-Throws { ConvertTo-HotkeyParts -HotkeyText "Ctrl+Alt+DefinitelyNotAKey" }
 $launcherContent = Get-Content -LiteralPath $launcherPath -Raw
 Assert-True ($launcherContent -match 'AudioSwitcher\.ps1') "Launcher does not call AudioSwitcher.ps1."
 Assert-True ($launcherContent -match 'ExecutionPolicy Bypass') "Launcher does not bypass local execution policy for portable start."
+
+$portableInstallContentForParser = Get-Content -LiteralPath $portableInstallPath -Raw
+[System.Management.Automation.Language.Parser]::ParseInput($portableInstallContentForParser, [ref]$null, [ref]$parseErrors) | Out-Null
+Assert-True ($parseErrors.Count -eq 0) ("Install-Portable.ps1 parser found errors: " + ($parseErrors | ForEach-Object { $_.Message } | Out-String))
+
+$portableUninstallContentForParser = Get-Content -LiteralPath $portableUninstallPath -Raw
+[System.Management.Automation.Language.Parser]::ParseInput($portableUninstallContentForParser, [ref]$null, [ref]$parseErrors) | Out-Null
+Assert-True ($parseErrors.Count -eq 0) ("Uninstall-Portable.ps1 parser found errors: " + ($parseErrors | ForEach-Object { $_.Message } | Out-String))
 
 Write-Host "Audio Switcher smoke tests passed."
