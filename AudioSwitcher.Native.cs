@@ -89,6 +89,7 @@ namespace PortableAudioSwitcher
     public static class AudioSwitcher
     {
         private const uint DEVICE_STATE_ACTIVE = 0x00000001;
+        private const uint CLSCTX_ALL = 0x17;
         private static readonly PROPERTYKEY PKEY_Device_FriendlyName =
             new PROPERTYKEY(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 14);
 
@@ -189,6 +190,10 @@ namespace PortableAudioSwitcher
                     ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eConsole), "eConsole");
                     ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eMultimedia), "eMultimedia");
                     ThrowIfFailed(policyConfig.SetDefaultEndpoint(next.Id, ERole.eCommunications), "eCommunications");
+                    if (dataFlow == EDataFlow.eRender)
+                    {
+                        UnmuteEndpoint(enumerator, next.Id);
+                    }
                 }
                 catch (COMException ex)
                 {
@@ -204,6 +209,35 @@ namespace PortableAudioSwitcher
                 ReleaseComObject(defaultDevice);
                 ReleaseComObject(collection);
                 ReleaseComObject(enumerator);
+            }
+        }
+
+        private static void UnmuteEndpoint(IMMDeviceEnumerator enumerator, string deviceId)
+        {
+            IMMDevice device = null;
+            object endpointVolumeObject = null;
+            IAudioEndpointVolume endpointVolume = null;
+
+            try
+            {
+                enumerator.GetDevice(deviceId, out device);
+
+                Guid endpointVolumeId = typeof(IAudioEndpointVolume).GUID;
+                device.Activate(ref endpointVolumeId, CLSCTX_ALL, IntPtr.Zero, out endpointVolumeObject);
+                endpointVolume = (IAudioEndpointVolume)endpointVolumeObject;
+
+                bool isMuted;
+                ThrowIfFailed(endpointVolume.GetMute(out isMuted), "Audioausgabe-Stummschaltung lesen");
+                if (isMuted)
+                {
+                    Guid eventContext = Guid.Empty;
+                    ThrowIfFailed(endpointVolume.SetMute(false, ref eventContext), "Audioausgabe-Stummschaltung aufheben");
+                }
+            }
+            finally
+            {
+                ReleaseComObject(endpointVolume ?? endpointVolumeObject);
+                ReleaseComObject(device);
             }
         }
 
@@ -399,6 +433,26 @@ namespace PortableAudioSwitcher
         void GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
         void SetValue(ref PROPERTYKEY key, ref PROPVARIANT propvar);
         void Commit();
+    }
+
+    [ComImport]
+    [Guid("5cdf2c82-841e-4546-9722-0cf74078229a")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IAudioEndpointVolume
+    {
+        [PreserveSig] int RegisterControlChangeNotify(IntPtr pNotify);
+        [PreserveSig] int UnregisterControlChangeNotify(IntPtr pNotify);
+        [PreserveSig] int GetChannelCount(out uint pnChannelCount);
+        [PreserveSig] int SetMasterVolumeLevel(float fLevelDB, ref Guid pguidEventContext);
+        [PreserveSig] int SetMasterVolumeLevelScalar(float fLevel, ref Guid pguidEventContext);
+        [PreserveSig] int GetMasterVolumeLevel(out float pfLevelDB);
+        [PreserveSig] int GetMasterVolumeLevelScalar(out float pfLevel);
+        [PreserveSig] int SetChannelVolumeLevel(uint nChannel, float fLevelDB, ref Guid pguidEventContext);
+        [PreserveSig] int SetChannelVolumeLevelScalar(uint nChannel, float fLevel, ref Guid pguidEventContext);
+        [PreserveSig] int GetChannelVolumeLevel(uint nChannel, out float pfLevelDB);
+        [PreserveSig] int GetChannelVolumeLevelScalar(uint nChannel, out float pfLevel);
+        [PreserveSig] int SetMute([MarshalAs(UnmanagedType.Bool)] bool bMute, ref Guid pguidEventContext);
+        [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool pbMute);
     }
 
     [StructLayout(LayoutKind.Sequential)]

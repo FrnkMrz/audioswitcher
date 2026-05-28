@@ -249,6 +249,8 @@ Describe "AudioSwitcher repository smoke tests" {
         & $script:AssertMatch -Content $script:nativeTypeContent -Pattern 'SwitchInputToNext' -Message "Input switching entry point is missing."
         & $script:AssertMatch -Content $script:nativeTypeContent -Pattern 'ListOutputDevices' -Message "Output device listing entry point is missing."
         & $script:AssertMatch -Content $script:nativeTypeContent -Pattern 'ListInputDevices' -Message "Input device listing entry point is missing."
+        & $script:AssertMatch -Content $script:nativeTypeContent -Pattern 'IAudioEndpointVolume' -Message "Output switching should be able to unmute the selected endpoint."
+        & $script:AssertMatch -Content $script:nativeTypeContent -Pattern 'SetMute\(false' -Message "Output switching should unmute the selected endpoint."
         & $script:AssertMatch -Content $script:nativeTypeContent -Pattern '0bd7a1be-7a1a-44db-8397-cc5392387b5e' -Message "IMMDeviceCollection IID is incorrect."
         & $script:AssertContains -Content $script:nativeTypeContent -ExpectedText 'EDataFlow.eRender' -Message "Output switching should enumerate render devices."
         & $script:AssertContains -Content $script:nativeTypeContent -ExpectedText 'EDataFlow.eCapture' -Message "Input switching should enumerate capture devices."
