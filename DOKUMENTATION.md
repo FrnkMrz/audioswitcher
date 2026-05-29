@@ -184,7 +184,7 @@ Dateien:
 Verhalten:
 
 - erstellt/entfernt Audio Switcher.lnk in shell:startup
-- Shortcut zeigt auf [Start-AudioSwitcher.bat](Start-AudioSwitcher.bat)
+- Shortcut startet `powershell.exe` direkt mit `-STA`, `-WindowStyle Hidden` und [AudioSwitcher.ps1](AudioSwitcher.ps1)
 - Shortcut nutzt optional [Assets/AudioSwitcher.ico](Assets/AudioSwitcher.ico)
 
 ## 7. Betriebskonzepte

@@ -237,7 +237,7 @@ Describe "AudioSwitcher repository smoke tests" {
         & $script:AssertMatch -Content $script:scriptContent -Pattern 'AudioDeviceKind\]::Output' -Message "Output hotkey window is missing."
         & $script:AssertMatch -Content $script:scriptContent -Pattern 'AudioDeviceKind\]::Input' -Message "Input hotkey window is missing."
         & $script:AssertMatch -Content $script:scriptContent -Pattern 'MOD_CONTROL' -Message "Hotkey modifier constants should be documented."
-        & $script:AssertMatch -Content $script:scriptContent -Pattern 'PerMonitorV2\) is enabled' -Message "Fixed notification size should mention DPI scaling."
+        & $script:AssertMatch -Content $script:scriptContent -Pattern 'Pixelmasse auf skalierten Displays korrekt bleiben' -Message "Fixed notification size should mention DPI scaling."
         & $script:AssertMatch -Content $script:scriptContent -Pattern '\[Math\]::Min\(\$formWidth,\s*600\)' -Message "Die Benachrichtigungsbreite wird nicht auf maximal 600 Pixel gedeckelt (erwartet: [Math]::Min(`$formWidth, 600))."
     }
 
@@ -272,7 +272,11 @@ Describe "AudioSwitcher repository smoke tests" {
 
         & $script:AssertMatch -Content $script:installAutostartContent -Pattern 'WScript\.Shell' -Message "Autostart installer should create a Windows shortcut."
         & $script:AssertMatch -Content $script:installAutostartContent -Pattern 'Startup' -Message "Autostart installer should target the Startup folder."
-        & $script:AssertMatch -Content $script:installAutostartContent -Pattern 'Start-AudioSwitcher\.bat' -Message "Autostart installer should launch the batch file."
+        & $script:AssertMatch -Content $script:installAutostartContent -Pattern 'TargetPath\s*=\s*"powershell\.exe"' -Message "Autostart installer should launch PowerShell directly."
+        $autostartArgumentsLine = (($script:installAutostartContent -split "`r?`n") | Where-Object { $_ -match '\$shortcut\.Arguments\s*=' } | Select-Object -First 1)
+        & $script:AssertMatch -Content $autostartArgumentsLine -Pattern '-STA' -Message "Autostart installer should launch PowerShell in STA mode."
+        & $script:AssertMatch -Content $autostartArgumentsLine -Pattern '-WindowStyle Hidden' -Message "Autostart installer should hide the PowerShell window."
+        & $script:AssertMatch -Content $autostartArgumentsLine -Pattern '\$scriptPath' -Message "Autostart installer should launch AudioSwitcher.ps1."
         & $script:AssertMatch -Content $script:installAutostartContent -Pattern 'IconLocation' -Message "Autostart installer should assign the project icon to the shortcut."
         & $script:AssertMatch -Content $script:portableInstallContent -Pattern 'LOCALAPPDATA' -Message "Portable installer should default to LocalAppData."
         & $script:AssertMatch -Content $script:portableInstallContent -Pattern 'Install-Autostart\.ps1' -Message "Portable installer should be able to install autostart in the target directory."
